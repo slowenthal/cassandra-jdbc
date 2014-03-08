@@ -34,14 +34,8 @@ import java.sql.SQLSyntaxErrorException;
 import java.sql.SQLTransientConnectionException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
+import com.datastax.driver.core.ConsistencyLevel;
 
-import org.apache.cassandra.thrift.ConsistencyLevel;
-import org.apache.cassandra.thrift.CqlResult;
-import org.apache.cassandra.thrift.InvalidRequestException;
-import org.apache.cassandra.thrift.SchemaDisagreementException;
-import org.apache.cassandra.thrift.TimedOutException;
-import org.apache.cassandra.thrift.UnavailableException;
-import org.apache.thrift.TException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,7 +70,7 @@ class CassandraStatement extends AbstractStatement implements CassandraStatement
 
     protected int resultSetHoldability = CassandraResultSet.DEFAULT_HOLDABILITY;
 
-    protected ResultSet currentResultSet = null;
+    protected com.datastax.driver.core.ResultSet currentResultSet = null;
 
     protected int updateCount = -1;
 
@@ -161,41 +155,44 @@ class CassandraStatement extends AbstractStatement implements CassandraStatement
             if (logger.isTraceEnabled()) logger.trace("CQL: "+ cql);
             
             resetResults();
-            CqlResult rSet = connection.execute(cql, consistencyLevel);
+            com.datastax.driver.core.ResultSet rSet = connection.execute(cql, consistencyLevel);
 
-            switch (rSet.getType())
-            {
-                case ROWS:
-                    currentResultSet = new CassandraResultSet(this, rSet);
-                    break;
-                case INT:
-                    updateCount = rSet.getNum();
-                    break;
-                case VOID:
-                    updateCount = 0;
-                    break;
-            }
+             currentResultSet = rSet;
+
+//            switch (rSet.getType())
+//            {
+//                case ROWS:
+//                    currentResultSet = rSet;
+//                    break;
+//                case INT:
+//                    updateCount = rSet.getNum();
+//                    break;
+//                case VOID:
+//                    updateCount = 0;
+//                    break;
+//            }
         }
-        catch (InvalidRequestException e)
+        // TODO - Fix exceptions
+        catch (Exception e)
         {
-            throw new SQLSyntaxErrorException(e.getWhy()+"\n'"+cql+"'",e);
+            throw new SQLSyntaxErrorException(e.getMessage()+"\n'"+cql+"'",e);
         }
-        catch (UnavailableException e)
-        {
-            throw new SQLNonTransientConnectionException(NO_SERVER, e);
-        }
-        catch (TimedOutException e)
-        {
-            throw new SQLTransientConnectionException(e);
-        }
-        catch (SchemaDisagreementException e)
-        {
-            throw new SQLRecoverableException(SCHEMA_MISMATCH);
-        }
-        catch (TException e)
-        {
-            throw new SQLNonTransientConnectionException(e);
-        }
+//        catch (UnavailableException e)
+//        {
+//            throw new SQLNonTransientConnectionException(NO_SERVER, e);
+//        }
+//        catch (TimedOutException e)
+//        {
+//            throw new SQLTransientConnectionException(e);
+//        }
+//        catch (SchemaDisagreementException e)
+//        {
+//            throw new SQLRecoverableException(SCHEMA_MISMATCH);
+//        }
+//        catch (TException e)
+//        {
+//            throw new SQLNonTransientConnectionException(e);
+//        }
 
     }
 

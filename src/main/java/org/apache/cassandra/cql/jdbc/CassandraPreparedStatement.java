@@ -50,15 +50,9 @@ import java.util.Calendar;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.datastax.driver.core.ConsistencyLevel;
 
-import org.apache.cassandra.thrift.CqlPreparedResult;
-import org.apache.cassandra.thrift.CqlResult;
-import org.apache.cassandra.thrift.InvalidRequestException;
-import org.apache.cassandra.thrift.SchemaDisagreementException;
-import org.apache.cassandra.thrift.TimedOutException;
-import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.cassandra.utils.ByteBufferUtil;
-import org.apache.thrift.TException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,7 +87,7 @@ class CassandraPreparedStatement extends CassandraStatement implements PreparedS
        if (LOG.isTraceEnabled()) LOG.trace("CQL: " + this.cql);
        try
        {
-           CqlPreparedResult result = con.prepare(cql);
+           CqlPreparedResult result = con.prepare(cql, consistencyLevel);
 
            itemId = result.itemId;
            count = result.count;

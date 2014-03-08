@@ -23,7 +23,6 @@ package org.apache.cassandra.cql.jdbc;
 
 import java.nio.charset.CharacterCodingException;
 
-import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.utils.ByteBufferUtil;
 
 
@@ -31,8 +30,6 @@ public class TypedColumn
 {
     public enum CollectionType {NOT_COLLECTION,MAP,LIST,SET};
     
-    private final Column rawColumn;
-
     // we cache the frequently-accessed forms: java object for value, String for name.
     // Note that {N|V}.toString() isn't always the same as Type.getString
     // (a good example is byte buffers).

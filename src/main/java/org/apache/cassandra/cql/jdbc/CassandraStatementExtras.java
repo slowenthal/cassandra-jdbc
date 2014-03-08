@@ -20,9 +20,11 @@
  */
 package org.apache.cassandra.cql.jdbc;
 
+import com.datastax.driver.core.ConsistencyLevel;
+
 import java.sql.Statement;
 
-import org.apache.cassandra.thrift.ConsistencyLevel;
+
 
 public interface CassandraStatementExtras extends Statement
 {

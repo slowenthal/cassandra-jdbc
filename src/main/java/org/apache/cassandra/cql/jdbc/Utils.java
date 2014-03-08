@@ -38,9 +38,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.Deflater;
 
-import org.apache.cassandra.thrift.Compression;
-import org.apache.cassandra.thrift.ConsistencyLevel;
-
+import com.datastax.driver.core.ConsistencyLevel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,40 +114,6 @@ class Utils
 
     protected static final Logger logger = LoggerFactory.getLogger(Utils.class);
 
-    /**
-     * Use the Compression object method to deflate the query string
-     *
-     * @param queryStr An un-compressed CQL query string
-     * @param compression The compression object
-     * @return A compressed string
-     */
-    public static ByteBuffer compressQuery(String queryStr, Compression compression)
-    {
-        byte[] data = queryStr.getBytes(Charsets.UTF_8);
-        Deflater compressor = new Deflater();
-        compressor.setInput(data);
-        compressor.finish();
-
-        ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
-        byte[] buffer = new byte[1024];
-
-        try
-        {
-            while (!compressor.finished())
-            {
-                int size = compressor.deflate(buffer);
-                byteArray.write(buffer, 0, size);
-            }
-        }
-        finally
-        {
-            compressor.end(); //clean up after the Deflater
-        }
-
-        logger.trace("Compressed query statement {} bytes in length to {} bytes", data.length, byteArray.size());
-
-        return ByteBuffer.wrap(byteArray.toByteArray());
-    }
 
     /**
      * Parse a URL for the Cassandra JDBC Driver
