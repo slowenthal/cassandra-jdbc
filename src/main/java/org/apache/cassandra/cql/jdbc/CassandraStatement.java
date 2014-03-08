@@ -70,7 +70,7 @@ class CassandraStatement extends AbstractStatement implements CassandraStatement
 
     protected int resultSetHoldability = CassandraResultSet.DEFAULT_HOLDABILITY;
 
-    protected com.datastax.driver.core.ResultSet currentResultSet = null;
+    protected ResultSet currentResultSet = null;
 
     protected int updateCount = -1;
 
@@ -157,7 +157,7 @@ class CassandraStatement extends AbstractStatement implements CassandraStatement
             resetResults();
             com.datastax.driver.core.ResultSet rSet = connection.execute(cql, consistencyLevel);
 
-             currentResultSet = rSet;
+             currentResultSet = new CassandraResultSet(this,rSet);
 
 //            switch (rSet.getType())
 //            {

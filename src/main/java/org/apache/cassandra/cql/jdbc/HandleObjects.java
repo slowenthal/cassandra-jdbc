@@ -36,7 +36,6 @@ import java.sql.Date;
 import java.sql.RowId;
 import java.sql.SQLException;
 import java.sql.SQLNonTransientException;
-import java.sql.SQLRecoverableException;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;

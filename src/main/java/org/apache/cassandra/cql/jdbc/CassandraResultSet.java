@@ -33,10 +33,7 @@ import java.sql.Date;
 import java.util.*;
 
 import com.datastax.driver.core.ColumnDefinitions;
-import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.Row;
-import org.apache.cassandra.cql.jdbc.TypedColumn.CollectionType;
-import org.apache.cassandra.utils.ByteBufferUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -157,8 +154,6 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
     private int fetchDirection;
 
-    private int fetchSize;
-
     private boolean wasNull;
 
     private ColumnDefinitions schema;
@@ -185,7 +180,6 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         this.statement = statement;
         this.resultSetType = statement.getResultSetType();
         this.fetchDirection = statement.getFetchDirection();
-        this.fetchSize = statement.getFetchSize();
         this.schema = resultSet.getColumnDefinitions();
 
         // Initialize to column values from the first row
@@ -257,103 +251,87 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         throw new SQLFeatureNotSupportedException(NOT_SUPPORTED);
     }
 
-
-    public BigDecimal getBigDecimal(int index) throws SQLException
-    {
-        checkIndex(index);
-        return curRow.getDecimal(index - 1);
-    }
-
     /** @deprecated */
     public BigDecimal getBigDecimal(int index, int scale) throws SQLException
     {
-        // TODO - Fix this
         checkIndex(index);
-        return null;
+        return (getBigDecimal(index).setScale(scale);
     }
 
     public BigDecimal getBigDecimal(String name) throws SQLException
     {
         checkName(name);
-        return curRow.getDecimal(name);
+        return getBigDecimal(schema.getIndexOf(name) + 1);
     }
 
     /** @deprecated */
     public BigDecimal getBigDecimal(String name, int scale) throws SQLException
     {
-      // TODO - fix this
         checkName(name);
-        return null;
+        return (getBigDecimal(name).setScale(scale);
     }
 
-    private BigDecimal getBigDecimal(int column) throws SQLException
+    public BigDecimal getBigDecimal(int index) throws SQLException
     {
+        index --;
         checkNotClosed();
-        Object value = column.getValue();
-        wasNull = value == null;
+        wasNull = curRow.isNull(index);
 
         if (wasNull) return BigDecimal.ZERO;
+        Class<?> type = schema.getType(index).asJavaClass();
 
-        if (value instanceof BigDecimal) return (BigDecimal) value;
+        // TODO Fix this if (value instanceof BigDecimal) return (BigDecimal) value;
 
-        if (value instanceof Long) return BigDecimal.valueOf((Long) value);
+        if (type == Long.class) return BigDecimal.valueOf(curRow.getLong(index));
 
-        if (value instanceof Double) return BigDecimal.valueOf((Double) value);
+        if (type == Double.class) return BigDecimal.valueOf(curRow.getDouble(index));
 
-        if (value instanceof BigInteger) return new BigDecimal((BigInteger) value);
+        // TODO - fix this if (value instanceof BigInteger) return new BigDecimal((BigInteger) value);
 
         try
         {
-            if (value instanceof String) return (new BigDecimal((String) value));
+            if (type == String.class) return (new BigDecimal(curRow.getString(index)));
         }
         catch (NumberFormatException e)
         {
             throw new SQLSyntaxErrorException(e);
         }
 
-        throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, value.getClass().getSimpleName(), "BigDecimal"));
-    }
-
-    public BigInteger getBigInteger(int index) throws SQLException
-    {
-       // TODO - fix this
-      checkIndex(index);
-//        return new BigInteger(curRow.getLong(index));
-      return null;
+        throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, type.getSimpleName(), "BigDecimal"));
     }
 
     public BigInteger getBigInteger(String name) throws SQLException
     {
       // TODO - fix this
         checkName(name);
-      return null;
+      return getBigInteger(schema.getIndexOf(name) + 1);
     }
 
-    private BigInteger getBigInteger(TypedColumn column) throws SQLException
+    public BigInteger getBigInteger(int index) throws SQLException
     {
-      // TODO fix this
+        index --;
         checkNotClosed();
-        Object value = column.getValue();
-        wasNull = value == null;
+        wasNull = curRow.isNull(index);
 
         if (wasNull) return BigInteger.ZERO;
+        Class<?> type = schema.getType(index).asJavaClass();
 
-        if (value instanceof BigInteger) return (BigInteger) value;
+        // TODO - fix this if (value instanceof BigInteger) return curRow.getB;
 
-        if (value instanceof Integer) return BigInteger.valueOf((Integer) value);
+        if (type == Integer.class) return BigInteger.valueOf(curRow.getInt(index));
 
-        if (value instanceof Long) return BigInteger.valueOf((Long) value);
+        if (type == Long.class) return BigInteger.valueOf(curRow.getLong(index));
 
         try
         {
-            if (value instanceof String) return (new BigInteger((String) value));
+            if (type == String.class) return (new BigInteger(curRow.getString(index)));
         }
         catch (NumberFormatException e)
         {
             throw new SQLSyntaxErrorException(e);
         }
 
-        throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, value.getClass().getSimpleName(), "BigInteger"));
+        throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, type.getSimpleName(), "BigInteger"));
     }
 
     public boolean getBoolean(String name) throws SQLException
@@ -399,7 +377,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         return getByte(schema.getIndexOf(name) + 1);
     }
 
-    public final Byte getByte(int index) throws SQLException
+    public final byte getByte(int index) throws SQLException
     {
       checkIndex(index);
       index --;
@@ -442,19 +420,20 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         return curRow.getBytes(index).array();
     }
 
-    public TypedColumn getColumn(int index) throws SQLException
-    {
-        checkIndex(index);
-        checkNotClosed();
-        return values.get(index - 1);
-    }
-
-    public TypedColumn getColumn(String name) throws SQLException
-    {
-        checkName(name);
-        checkNotClosed();
-        return values.get(indexMap.get(name).intValue());
-    }
+// TODO - probably remove this
+//    public TypedColumn getColumn(int index) throws SQLException
+//    {
+//        checkIndex(index);
+//        checkNotClosed();
+//        return values.get(index - 1);
+//    }
+//
+//    public TypedColumn getColumn(String name) throws SQLException
+//    {
+//        checkName(name);
+//        checkNotClosed();
+//        return values.get(indexMap.get(name).intValue());
+//    }
 
     public int getConcurrency() throws SQLException
     {
@@ -513,7 +492,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         return getDouble(schema.getIndexOf(name) + 1);
     }
 
-    public final Double getDouble(int index) throws SQLException
+    public final double getDouble(int index) throws SQLException
     {
         index --;
         checkNotClosed();
@@ -524,7 +503,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
         if (type == Double.class) return curRow.getDouble(index);
 
-        if (type == Float.class) return (double) curRow.getFloat(index);
+        if (type == Float.class) return curRow.getFloat(index);
 
         if (type == Integer.class) return (double) curRow.getInt(index);
 
@@ -562,7 +541,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
       return getFloat(schema.getIndexOf(name) + 1);
     }
 
-    public final Float getFloat(int index) throws SQLException
+    public final float getFloat(int index) throws SQLException
     {
         index --;
         checkNotClosed();
@@ -599,42 +578,37 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         return statement.getResultSetHoldability();
     }
 
-    public int getInt(int index) throws SQLException
-    {
-        checkIndex(index);
-        return curRow.getInt(index - 1);
-    }
-
     public int getInt(String name) throws SQLException
     {
         checkName(name);
-      return curRow.getInt(name);
+      return getInt(schema.getIndexOf(name) + 1);
     }
 
-    private int getInt(TypedColumn column) throws SQLException
+    public int getInt(int index) throws SQLException
     {
+        index --;
         checkNotClosed();
-        Object value = column.getValue();
-        wasNull = value == null;
+        wasNull = curRow.isNull(index);
 
         if (wasNull) return 0;
+        Class<?> type = schema.getType(index).asJavaClass();
 
-        if (value instanceof Integer) return ((Integer) value);
+        if (type == Integer.class) return curRow.getInt(index);
 
-        if (value instanceof Long) return ((Long) value).intValue();
+        if (type == Long.class) return (int) curRow.getLong(index);
 
-        if (value instanceof BigInteger) return ((BigInteger) value).intValue();
+        // TODO - fix this if (value instanceof BigInteger) return ((BigInteger) value).intValue();
 
         try
         {
-            if (value instanceof String) return (Integer.parseInt((String) value));
+            if (type == String.class) return Integer.parseInt(curRow.getString(index));
         }
         catch (NumberFormatException e)
         {
             throw new SQLSyntaxErrorException(e);
         }
 
-        throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, value.getClass().getSimpleName(), "int"));
+        throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, type.getSimpleName(), "int"));
     }
 
     public byte[] getKey() throws SQLException
@@ -642,94 +616,77 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         return curRowKey;
     }
 
-    public List<?> getList(int index) throws SQLException
-    {
-      // TODO OOH - we need the type here
-        checkIndex(index);
-        return curRow.getList(index - 1);
-      return null;
-    }
-
     public List<?> getList(String name) throws SQLException
     {
       // TODO - FIX THIS
         checkName(name);
-       return null;
+       return getList(schema.getIndexOf(name) + 1);
     }
 
-    private List<?> getList(TypedColumn column) throws SQLException
+    public List<?> getList(int index) throws SQLException
     {
-      // TODO - fix this
+      index --;
         checkNotClosed();
-        Object value = column.getValue();
-        wasNull = value == null;
-        if (column.getCollectionType() != CollectionType.LIST) throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE,
-            value.getClass().getSimpleName(),
-            "List"));
-        return (List<?>) value;
-    }
+        wasNull = curRow.isNull(index);
+        Class<?> type = schema.getType(index).asJavaClass();
 
-    public long getLong(int index) throws SQLException
-    {
-        checkIndex(index);
-        return getLong(values.get(index - 1));
+        if (schema.getType(index).isCollection() /* TODO  - validate is LIST here */) throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE,
+            type.getSimpleName(),
+            "List"));
+        return curRow.getList(index, Object.class);
     }
 
     public long getLong(String name) throws SQLException
     {
         checkName(name);
-        return getLong(indexMap.get(name).intValue());
+        return getLong(schema.getIndexOf(name) + 1);
     }
 
-    private Long getLong(TypedColumn column) throws SQLException
+    public long getLong(int index) throws SQLException
     {
+        index --;
         checkNotClosed();
-        Object value = column.getValue();
-        wasNull = value == null;
+        wasNull = curRow.isNull(index);
+        Class<?> type = schema.getType(index).asJavaClass();
 
         if (wasNull) return 0L;
 
-        if (value instanceof Long) return (Long) value;
+        if (type == Long.class) return curRow.getLong(index);
 
-        if (value instanceof Integer) return Long.valueOf((Integer) value);
+        if (type == Integer.class) return (long) curRow.getInt(index);
 
-        if (value instanceof BigInteger) return getBigInteger(column).longValue();
+        //TODO - FIX if (value instanceof BigInteger) return getBigInteger(column).longValue();
 
-        if (value instanceof Long) return (Long) value;
 
         try
         {
-            if (value instanceof String) return (Long.parseLong((String) value));
+            if (type == String.class) return (Long.parseLong(curRow.getString(index)));
         }
         catch (NumberFormatException e)
         {
             throw new SQLSyntaxErrorException(e);
         }
 
-        throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, value.getClass().getSimpleName(), "Long"));
-    }
-
-    public Map<?, ?> getMap(int index) throws SQLException
-    {
-        checkIndex(index);
-        return getMap(values.get(index - 1));
+        throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, type.getSimpleName(), "Long"));
     }
 
     public Map<?, ?> getMap(String name) throws SQLException
     {
         checkName(name);
-        return getMap(indexMap.get(name).intValue());
+        return getMap(schema.getIndexOf(name) + 1);
     }
 
-    private Map<?, ?> getMap(TypedColumn column) throws SQLException
+    public Map<?, ?> getMap(int index) throws SQLException
     {
-        checkNotClosed();
-        Object value = column.getValue();
-        wasNull = value == null;
-        if (column.getCollectionType() != CollectionType.MAP) throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE,
-            value.getClass().getSimpleName(),
-            "Map"));
-        return (Map<?, ?>) value;
+      // TODO - FIX THIS
+//        checkNotClosed();
+//        Object value = column.getValue();
+//        wasNull = value == null;
+//        if (column.getCollectionType() != CollectionType.MAP) throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE,
+//            value.getClass().getSimpleName(),
+//            "Map"));
+//        return (Map<?, ?>) value;
+      return null;
     }
 
     public ResultSetMetaData getMetaData() throws SQLException
@@ -738,30 +695,40 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         return meta;
     }
 
-    public Object getObject(int index) throws SQLException
-    {
-        checkIndex(index);
-        return getObject(values.get(index - 1));
-    }
-
     public Object getObject(String name) throws SQLException
     {
         checkName(name);
-        return getObject(indexMap.get(name).intValue());
+        return getObject(schema.getIndexOf(name) + 1);
     }
 
 
-    private Object getObject(TypedColumn column) throws SQLException
+    public Object getObject(int index) throws SQLException
     {
+        index --;
         checkNotClosed();
-        Object value = column.getValue();
-        
-        // handle date properly for expectations of a JDBC caller
-        if (value != null && column.getValueType() == JdbcDate.instance && value instanceof java.util.Date) 
-            value = new java.sql.Timestamp(((java.util.Date) value).getTime());
+      wasNull = curRow.isNull(index);
+      if (wasNull) return null;
 
-        wasNull = value == null;
-        return (wasNull) ? null : value;
+      Class<?> type = schema.getType(index).asJavaClass();
+
+      // handle date properly for expectations of a JDBC caller
+      if (type == Integer.class) return curRow.getInt(index);
+      if (type == Long.class) return curRow.getLong(index);
+      if (type == String.class) return curRow.getString(index);
+      if (type == Boolean.class) return curRow.getBool(index);
+      if (type == Float.class) return curRow.getFloat(index);
+      if (type == Double.class) return curRow.getDouble(index);
+      if (type == ByteBuffer.class) return curRow.getBytes(index).array();
+
+      // TODO - there are more types
+
+      if (type == java.util.Date.class) {
+          return new Timestamp(curRow.getDate(index).getTime());
+        }
+
+      // TODO - Throw something
+      return null;
+
     }
 
     public int getRow() throws SQLException
@@ -770,85 +737,74 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         return rowNumber;
     }
 
-    public RowId getRowId(int index) throws SQLException
-    {
-        checkIndex(index);
-        return getRowId(values.get(index - 1));
-    }
-
     public RowId getRowId(String name) throws SQLException
     {
         checkName(name);
-        return getRowId(indexMap.get(name).intValue());
+        return getRowId(schema.getIndexOf(name) + 1);
     }
 
-    private final RowId getRowId(TypedColumn column) throws SQLException
+    public final RowId getRowId(int index) throws SQLException
     {
-        checkNotClosed();
-        ByteBuffer value = column.getRawColumn().value;
-        wasNull = value == null;
-        return value == null ? null : new CassandraRowId(value);
-    }
+      checkNotClosed();
+      index --;
+      wasNull = curRow.isNull(index);
+      if (wasNull) return null;
 
-    public short getShort(int index) throws SQLException
-    {
-        checkIndex(index);
-        return getShort(values.get(index - 1));
-    }
-
-    public Set<?> getSet(int index) throws SQLException
-    {
-        checkIndex(index);
-        return getSet(values.get(index - 1));
+      Object rowValue = getObject(index + 1);
+        return new CassandraRowId(null);  // TODO fix this !!!!  need to gen a rowid for different types
     }
 
     public Set<?> getSet(String name) throws SQLException
     {
         checkName(name);
-        return getSet(indexMap.get(name).intValue());
+        return getSet(schema.getIndexOf(name) + 1);
     }
 
-    private Set<?> getSet(TypedColumn column) throws SQLException
+    public Set<?> getSet(int index) throws SQLException
     {
-        checkNotClosed();
-        Object value = column.getValue();
-        wasNull = value == null;
-        if (column.getCollectionType() != CollectionType.SET) throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE,
-            value.getClass().getSimpleName(),
-            "Set"));
-        return (Set<?>) value;
+      // TODO - FIX THIS!!!
+//        checkNotClosed();
+//        Object value = column.getValue();
+//        wasNull = value == null;
+//        if (column.getCollectionType() != CollectionType.SET) throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE,
+//            value.getClass().getSimpleName(),
+//            "Set"));
+//        return (Set<?>) value;
+      return null;
     }
 
     public short getShort(String name) throws SQLException
     {
         checkName(name);
-        return getShort(indexMap.get(name).intValue());
+        return getShort(schema.getIndexOf(name) + 1);
     }
 
-    private final Short getShort(TypedColumn column) throws SQLException
+    public final short getShort(int index) throws SQLException
     {
+        index --;
         checkNotClosed();
-        Object value = column.getValue();
-        wasNull = value == null;
+        wasNull = curRow.isNull(index);
 
         if (wasNull) return 0;
+        Class<?> type = schema.getType(index).asJavaClass();
 
-        if (value instanceof Integer) return ((Integer) value).shortValue();
+        if (type == Integer.class) return ((Integer) curRow.getInt(index)).shortValue();
 
-        if (value instanceof Long) return ((Long) value).shortValue();
+        if (type == Long.class) return ((Long) curRow.getLong(index)).shortValue();
 
-        if (value instanceof BigInteger) return ((BigInteger) value).shortValue();
+
+        // TODO - FIX THIS if (value instanceof BigInteger) return ((BigInteger) value).shortValue();
 
         try
         {
-            if (value instanceof String) return (new Short((String) value));
+            if (type ==  String.class) return (new Short(curRow.getString(index)));
         }
         catch (NumberFormatException e)
         {
             throw new SQLSyntaxErrorException(e);
         }
 
-        throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, value.getClass().getSimpleName(), "Short"));
+        throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, type.getSimpleName(), "Short"));
     }
 
     public Statement getStatement() throws SQLException
@@ -857,30 +813,21 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         return statement;
     }
 
-    public String getString(int index) throws SQLException
-    {
-        checkIndex(index);
-        return getString(values.get(index - 1));
-    }
-
     public String getString(String name) throws SQLException
     {
         checkName(name);
-        return getString(indexMap.get(name).intValue());
+        return getString(schema.getIndexOf(name) + 1);
     }
 
-    private String getString(TypedColumn column) throws SQLException
+    public String getString(int index) throws SQLException
     {
+        index --;
         checkNotClosed();
-        Object value = column.getValue();
-        wasNull = value == null;
-        return (wasNull) ? null : value.toString();
-    }
+        wasNull = curRow.isNull(index);
+        if (wasNull) return null;
 
-    public Time getTime(int index) throws SQLException
-    {
-        checkIndex(index);
-        return getTime(values.get(index - 1));
+        Object value = getObject(index + 1);
+        return value.toString();
     }
 
     public Time getTime(int index, Calendar calendar) throws SQLException
@@ -893,7 +840,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
     public Time getTime(String name) throws SQLException
     {
         checkName(name);
-        return getTime(indexMap.get(name).intValue());
+        return getTime(schema.getIndexOf(name) + 1);
     }
 
     public Time getTime(String name, Calendar calendar) throws SQLException
@@ -903,34 +850,29 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         return getTime(name);
     }
 
-    private Time getTime(TypedColumn column) throws SQLException
+    public Time getTime(int index) throws SQLException
     {
+        index --;
         checkNotClosed();
-        Object value = column.getValue();
-        wasNull = value == null;
+        wasNull = curRow.isNull(index);
 
         if (wasNull) return null;
+        Class<?> type = schema.getType(index).asJavaClass();
 
-        if (value instanceof Long) return new Time((Long) value);
+        if (type == Long.class) return new Time(curRow.getLong(index));
 
-        if (value instanceof java.util.Date) return new Time(((java.util.Date) value).getTime());
+        if (type == java.util.Date.class) return new Time(curRow.getDate(index).getTime());
 
         try
         {
-            if (value instanceof String) return Time.valueOf((String) value);
+            if (type == String.class) return Time.valueOf(curRow.getString(index));
         }
         catch (IllegalArgumentException e)
         {
             throw new SQLSyntaxErrorException(e);
         }
 
-        throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, value.getClass().getSimpleName(), "SQL Time"));
-    }
-
-    public Timestamp getTimestamp(int index) throws SQLException
-    {
-        checkIndex(index);
-        return getTimestamp(values.get(index - 1));
+        throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, type.getSimpleName(), "SQL Time"));
     }
 
     public Timestamp getTimestamp(int index, Calendar calendar) throws SQLException
@@ -943,7 +885,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
     public Timestamp getTimestamp(String name) throws SQLException
     {
         checkName(name);
-        return getTimestamp(indexMap.get(name).intValue());
+        return getTimestamp(schema.getIndexOf(name) + 1);
     }
 
     public Timestamp getTimestamp(String name, Calendar calendar) throws SQLException
@@ -953,28 +895,29 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         return getTimestamp(name);
     }
 
-    private Timestamp getTimestamp(TypedColumn column) throws SQLException
+    public Timestamp getTimestamp(int index) throws SQLException
     {
+        index --;
         checkNotClosed();
-        Object value = column.getValue();
-        wasNull = value == null;
+        wasNull = curRow.isNull(index);
 
         if (wasNull) return null;
+        Class<?> type = schema.getType(index).asJavaClass();
 
-        if (value instanceof Long) return new Timestamp((Long) value);
+        if (type == Long.class) return new Timestamp(curRow.getLong(index));
 
-        if (value instanceof java.util.Date) return new Timestamp(((java.util.Date) value).getTime());
+        if (type == java.util.Date.class) return new Timestamp(curRow.getDate(index).getTime());
 
         try
         {
-            if (value instanceof String) return Timestamp.valueOf((String) value);
+            if (type == String.class) return Timestamp.valueOf(curRow.getString(index));
         }
         catch (IllegalArgumentException e)
         {
             throw new SQLSyntaxErrorException(e);
         }
 
-        throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, value.getClass().getSimpleName(), "SQL Timestamp"));
+        throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, type.getSimpleName(), "SQL Timestamp"));
     }
 
     public int getType() throws SQLException
@@ -1020,7 +963,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
     public boolean isClosed() throws SQLException
     {
-        return values == null;
+        return cResultSet.isExhausted();
     }
 
     public boolean isFirst() throws SQLException
@@ -1032,7 +975,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
     public boolean isLast() throws SQLException
     {
         checkNotClosed();
-        return !rowsIterator.hasNext();
+        return !cResultSet.isExhausted();
     }
 
     public boolean isWrapperFor(Class<?> iface) throws SQLException
@@ -1052,10 +995,8 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
     {
         if (hasMoreRows())
         {
-            // populateColumns is called upon init to set up the metadata fields; so skip first call
-            if (rowNumber != 0) populateColumns();
-            else rowsIterator.next();
-// populateColumns();
+            else
+          curRow = cResultSet.one();
             rowNumber++;
             return true;
         }
@@ -1079,44 +1020,45 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
     }
 
-    private TypedColumn createColumn(Column column)
-    {
-        assert column != null;
-        assert column.name != null;
-
-        AbstractJdbcType<?> keyType = null;
-        CollectionType type = CollectionType.NOT_COLLECTION;
-        String nameType = schema.name_types.get(column.name);
-        if (nameType == null) nameType = "AsciiType";
-        AbstractJdbcType<?> comparator = TypesMap.getTypeForComparator(nameType == null ? schema.default_name_type : nameType);
-        String valueType = schema.value_types.get(column.name);
-        AbstractJdbcType<?> validator = TypesMap.getTypeForComparator(valueType == null ? schema.default_value_type : valueType);
-        if (validator == null)
-        {
-            int index = valueType.indexOf("(");
-            assert index > 0;
-
-            String collectionClass = valueType.substring(0, index);
-            if (collectionClass.endsWith("ListType")) type = CollectionType.LIST;
-            else if (collectionClass.endsWith("SetType")) type = CollectionType.SET;
-            else if (collectionClass.endsWith("MapType")) type = CollectionType.MAP;
-
-            String[] split = valueType.substring(index + 1, valueType.length() - 1).split(",");
-            if (split.length > 1)
-            {
-                keyType = TypesMap.getTypeForComparator(split[0]);
-                validator = TypesMap.getTypeForComparator(split[1]);
-            }
-            else validator = TypesMap.getTypeForComparator(split[0]);
-
-        }
-
-        TypedColumn tc = new TypedColumn(column, comparator, validator, keyType, type);
-
-        if (logger.isTraceEnabled()) logger.trace("tc = " + tc);
-
-        return tc;
-    }
+// TODO - maybe remove this
+//    private TypedColumn createColumn(Column column)
+//    {
+//        assert column != null;
+//        assert column.name != null;
+//
+//        AbstractJdbcType<?> keyType = null;
+//        CollectionType type = CollectionType.NOT_COLLECTION;
+//        String nameType = schema.name_types.get(column.name);
+//        if (nameType == null) nameType = "AsciiType";
+//        AbstractJdbcType<?> comparator = TypesMap.getTypeForComparator(nameType == null ? schema.default_name_type : nameType);
+//        String valueType = schema.value_types.get(column.name);
+//        AbstractJdbcType<?> validator = TypesMap.getTypeForComparator(valueType == null ? schema.default_value_type : valueType);
+//        if (validator == null)
+//        {
+//            int index = valueType.indexOf("(");
+//            assert index > 0;
+//
+//            String collectionClass = valueType.substring(0, index);
+//            if (collectionClass.endsWith("ListType")) type = CollectionType.LIST;
+//            else if (collectionClass.endsWith("SetType")) type = CollectionType.SET;
+//            else if (collectionClass.endsWith("MapType")) type = CollectionType.MAP;
+//
+//            String[] split = valueType.substring(index + 1, valueType.length() - 1).split(",");
+//            if (split.length > 1)
+//            {
+//                keyType = TypesMap.getTypeForComparator(split[0]);
+//                validator = TypesMap.getTypeForComparator(split[1]);
+//            }
+//            else validator = TypesMap.getTypeForComparator(split[0]);
+//
+//        }
+//
+//        TypedColumn tc = new TypedColumn(column, comparator, validator, keyType, type);
+//
+//        if (logger.isTraceEnabled()) logger.trace("tc = " + tc);
+//
+//        return tc;
+//    }
 
     public boolean previous() throws SQLException
     {
@@ -1177,12 +1119,12 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         public String getColumnClassName(int column) throws SQLException
         {
             checkIndex(column);
-            return values.get(column - 1).getValueType().getType().getName();
+            return schema.getType(column - 1).asJavaClass().getName();
         }
 
         public int getColumnCount() throws SQLException
         {
-            return values.size();
+            return schema.size();
         }
 
         public int getColumnDisplaySize(int column) throws SQLException
@@ -1201,11 +1143,12 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         public String getColumnName(int column) throws SQLException
         {
             checkIndex(column);
-            return values.get(column - 1).getNameString();
+            return schema.getName(column - 1);
         }
 
         public int getColumnType(int column) throws SQLException
         {
+            // TODO - maybe cook up a map for this up front??
             checkIndex(column);
             return values.get(column - 1).getValueType().getJdbcType();
         }
@@ -1216,7 +1159,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         public String getColumnTypeName(int column) throws SQLException
         {
             checkIndex(column);
-            return values.get(column - 1).getValueType().getClass().getSimpleName();
+            return schema.getType(column - 1).asJavaClass().getSimpleName();
         }
 
         public int getPrecision(int column) throws SQLException

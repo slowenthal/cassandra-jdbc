@@ -32,7 +32,7 @@ public interface CassandraResultSetExtras extends ResultSet
     /**
      * @return the current row key
      */
-    public byte[] getKey()throws SQLException;;
+    // public byte[] getKey()throws SQLException;;
     
     /** @return a BigInteger value for the given column offset*/
     public BigInteger getBigInteger(int i) throws SQLException;
@@ -48,9 +48,4 @@ public interface CassandraResultSetExtras extends ResultSet
     public Map<?,?> getMap(int index) throws SQLException;
     public Map<?,?> getMap(String name) throws SQLException;
 
-
-    /** @return the raw column data for the given column offset */
-    public TypedColumn getColumn(int i) throws SQLException;
-    /** @return the raw column data for the given column name */
-    public TypedColumn getColumn(String name) throws SQLException;
 }
