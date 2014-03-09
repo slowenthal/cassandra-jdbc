@@ -92,7 +92,7 @@ public class UtilsUnitTest
         String happypath = "jdbc:cassandra://localhost:9170/Keyspace1?consistency=QUORUM&version=3.0.0";
         Properties props = Utils.parseURL(happypath);
         
-        if (LOG.isDebugEnabled()) LOG.debug("happypath    = '{}'", happypath);
+        if (LOG.isDebugEnabled()) LOG.debug("happypath  = '{}'", happypath);
 
         
         String result = Utils.createSubName(props);

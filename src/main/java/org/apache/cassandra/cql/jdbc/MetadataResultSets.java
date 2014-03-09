@@ -27,11 +27,8 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
 import java.sql.DatabaseMetaData;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.SQLTransientException;
 import java.sql.Types;
 import java.util.*;
 
@@ -56,13 +53,32 @@ public  class MetadataResultSets
 
     private static class CannedResultSet implements com.datastax.driver.core.ResultSet {
 
-      List<CannedRow> values;
-      List<String> ColNames;
-      int curRow;
+      private CannedRow[] cannedRows;
+      private List<String> ColNames;
+      private int curRowNum;
+      private CannedRow curCannedRow;
+      private AbstractJdbcType[] jdbcTypes;
 
-      private CannedResultSet(List<CannedRow> values) {
-        this.values = values;
-        curRow = 0;
+      private CannedResultSet(CannedRow...cannedRows) {
+        this.cannedRows = cannedRows;
+        curRowNum = 0;
+        curCannedRow = null;
+        jdbcTypes = null;
+
+        // Populate JDBCTypes off the first row
+        if (cannedRows.length > 0) {
+
+           Object[] row1Values = cannedRows[0].rowValues;
+           jdbcTypes = new AbstractJdbcType[row1Values.length];
+           for (int i = 0; i < row1Values.length; i++) {
+             try {
+               jdbcTypes[i] = HandleObjects.getType(row1Values[i].getClass());
+             } catch (SQLException e) {
+               // TODO - do something better here
+               e.printStackTrace();
+             }
+           }
+        }
       }
 
       @Override
@@ -72,12 +88,19 @@ public  class MetadataResultSets
 
       @Override
       public Row one() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        if (curRowNum < cannedRows.length) {
+          curRowNum++;
+          curCannedRow = cannedRows[curRowNum];
+          return curCannedRow;
+        } else {
+          // TODO - do we throw something here?
+          return null;
+        }
       }
 
       @Override
       public List<Row> all() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        return Arrays.asList((Row[])cannedRows);
       }
 
       @Override
@@ -112,11 +135,19 @@ public  class MetadataResultSets
 
       @Override
       public boolean isExhausted() {
-        return curRow > values.size();
+        return curRowNum > cannedRows.length;
       }
 
-
+    }
       private static class CannedRow implements com.datastax.driver.core.Row {
+
+        Object[] rowValues;
+
+        private CannedRow(Object...objects) {
+            rowValues = objects;
+        }
+
+
         @Override
         public ColumnDefinitions getColumnDefinitions() {
           return null;  //To change body of implemented methods use File | Settings | File Templates.
@@ -214,7 +245,7 @@ public  class MetadataResultSets
 
         @Override
         public String getString(int i) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
+          return rowValues[i - 1].toString();
         }
 
         @Override
@@ -291,80 +322,68 @@ public  class MetadataResultSets
         public <K, V> Map<K, V> getMap(String s, Class<K> kClass, Class<V> vClass) {
           return null;  //To change body of implemented methods use File | Settings | File Templates.
         }
-      }
-    }
+     }
 
+     static class CannedColumnDefinitions implements java.lang.Iterable<com.datastax.driver.core.ColumnDefinitions.Definition> {
+       List<com.datastax.driver.core.ColumnDefinitions.Definition> definitionList;
+
+       CannedColumnDefinitions(com.datastax.driver.core.ColumnDefinitions.Definition[] defs) {
+          definitionList = Arrays.asList(defs);
+       }
+
+       @Override
+       public Iterator<ColumnDefinitions.Definition> iterator() {
+         return definitionList.iterator();
+       }
+     }
+
+    // Convenience method for cleaner code.  Why don't they have macros in Java???
+    private static CannedRow mkRow(Object... objects) {
+      return new CannedRow(objects);
+    }
 
 
     public  CassandraResultSet makeTableTypes(CassandraStatement statement) throws SQLException
     {
-        final  Entry[][] tableTypes = { { new Entry("TABLE_TYPE",bytes(TABLE_CONSTANT),Entry.ASCII_TYPE)} };
-
-//        // use tableTypes with the key in column number 1 (one based)
-//        CqlResult cqlresult =  makeCqlResult(tableTypes, 1);
-//
-//        CassandraResultSet result = new CassandraResultSet(statement,cqlresult);
-//        return result;
-      return null;
+        CannedResultSet cr = new CannedResultSet(mkRow(TABLE_CONSTANT));
+        return new CassandraResultSet(statement,cr);
     }
 
-    public  CassandraResultSet makeCatalogs(CassandraStatement statement) throws SQLException
-    {
-        final Entry[][] catalogs = { { new Entry("TABLE_CAT",bytes(statement.connection.getCatalog()),Entry.ASCII_TYPE)} };
+  public  CassandraResultSet makeCatalogs(CassandraStatement statement) throws SQLException
+  {
+    CannedResultSet cr = new CannedResultSet(mkRow(statement.connection.getCatalog()));
+    return new CassandraResultSet(statement,cr);
+  }
 
-//        // use catalogs with the key in column number 1 (one based)
-//        CqlResult cqlresult =  makeCqlResult(catalogs, 1);
-//
-//        CassandraResultSet result = new CassandraResultSet(statement,cqlresult);
-//        return result;
-      return null;
-    }
-    
     public  CassandraResultSet makeSchemas(CassandraStatement statement, String schemaPattern) throws SQLException
     {
-//        if ("%".equals(schemaPattern)) schemaPattern = null;
-//
-//        // TABLE_SCHEM String => schema name
-//        // TABLE_CATALOG String => catalog name (may be null)
-//
-//        String query = "SELECT keyspace_name FROM system.schema_keyspaces";
-//        if (schemaPattern!=null) query = query + " where keyspace_name = '" + schemaPattern + "'";
-//
-//        String catalog = statement.connection.getCatalog();
-//        Entry entryCatalog = new Entry("TABLE_CATALOG",bytes(catalog),Entry.ASCII_TYPE);
-//
-//        CassandraResultSet result;
-//        List<Entry> col;
-//        List<List<Entry>> rows = new ArrayList<List<Entry>>();
-//        // determine the schemas
-//        result = (CassandraResultSet)statement.executeQuery(query);
-//
-//        while (result.next())
-//        {
-//            Entry entrySchema = new Entry("TABLE_SCHEM",bytes(result.getString(1)),Entry.ASCII_TYPE);
-//            col = new ArrayList<Entry>();
-//            col.add(entrySchema);
-//            col.add(entryCatalog);
-//            rows.add(col);
-//        }
-//
-//        // just return the empty result if there were no rows
-//        if (rows.isEmpty() )return result;
-//
-//        // use schemas with the key in column number 2 (one based)
-//        CqlResult cqlresult;
-//        try
-//        {
-//            cqlresult = makeCqlResult(rows, 1);
-//        }
-//        catch (CharacterCodingException e)
-//        {
-//            throw new SQLTransientException(e);
-//        }
-//
-//        result = new CassandraResultSet(statement,cqlresult);
-//        return result;
-      return null;
+        if ("%".equals(schemaPattern)) schemaPattern = null;
+
+        // TABLE_SCHEM String => schema name
+        // TABLE_CATALOG String => catalog name (may be null)
+
+        String query = "SELECT keyspace_name FROM system.schema_keyspaces";
+        if (schemaPattern!=null) query = query + " where keyspace_name = '" + schemaPattern + "'";
+
+        String catalog = statement.connection.getCatalog();
+
+         CassandraResultSet result = (CassandraResultSet)statement.executeQuery(query);
+
+         ArrayList<CannedRow> cannedRows = new ArrayList<CannedRow>();
+
+        while (result.next())
+        {
+              cannedRows.add(mkRow(catalog, result.getString(1)));
+        }
+
+        // just return the empty result if there were no rows
+        if (cannedRows.isEmpty())return result;
+
+        // use schemas with the key in column number 2 (one based)
+        CannedResultSet cr = new CannedResultSet(cannedRows.toArray(new CannedRow[cannedRows.size()]));
+
+        result = new CassandraResultSet(statement,cr);
+        return result;
     }
     
     public CassandraResultSet makeTables(CassandraStatement statement, String schemaPattern, String tableNamePattern) throws SQLException
