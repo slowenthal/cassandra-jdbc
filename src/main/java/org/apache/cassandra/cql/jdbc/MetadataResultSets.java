@@ -21,11 +21,6 @@
 package org.apache.cassandra.cql.jdbc;
 
 import static org.apache.cassandra.utils.ByteBufferUtil.bytes;
-import static org.apache.cassandra.utils.ByteBufferUtil.string;
-
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
@@ -33,10 +28,7 @@ import java.sql.Types;
 import java.util.*;
 
 import com.datastax.driver.core.*;
-import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.cassandra.utils.ByteBufferUtil;
-
-
 
 public  class MetadataResultSets
 {
@@ -48,314 +40,11 @@ public  class MetadataResultSets
     // Private Constructor
     private MetadataResultSets() {}
 
-    private static class CannedResultSet implements com.datastax.driver.core.ResultSet {
 
-      private CannedRow[] cannedRows;
-      private String[] colNames;
-      private int curRowNum;
-      private CannedRow curCannedRow;
-      private AbstractJdbcType[] jdbcTypes;
-      private CannedColumnDefinitions columnDefinitions;
-
-      private CannedResultSet() {
-        cannedRows = null;
-        curRowNum = 0;
-        curCannedRow = null;
-        columnDefinitions = null;
-        jdbcTypes = null;
-      }
-
-      private CannedResultSet withRows(CannedRow...cannedRows) {
-        if (colNames == null) {
-          // We need the column names first
-          // TODO - throw something
-        }
-         this.cannedRows = cannedRows;
-
-        // Populate JDBCTypes off the first row
-        if (cannedRows.length > 0) {
-
-           Object[] row1Values = cannedRows[0].rowValues;
-          com.datastax.driver.core.ColumnDefinitions.Definition[] defs
-                  = new com.datastax.driver.core.ColumnDefinitions.Definition[row1Values.length];
-           jdbcTypes = new AbstractJdbcType[row1Values.length];
-           for (int i = 0; i < row1Values.length; i++) {
-             try {
-               DataType dataType;
-               if (row1Values[i].getClass() == String.class) {
-                 dataType = DataType.text();
-               } else if (row1Values[i].getClass() == boolean.class) {
-                  dataType = DataType.cboolean();
-               } else {
-                 // TODO Build this out
-                 dataType = DataType.cint();
-               }
-               defs[i] = new CannedDefinition("","",colNames[i], dataType);
-               jdbcTypes[i] = HandleObjects.getType(row1Values[i].getClass());
-             } catch (SQLException e) {
-               // TODO - do something better here
-               e.printStackTrace();
-             }
-           }
-          columnDefinitions = new CannedColumnDefinitions(defs);
-        }
-
-        return this;
-      }
-
-
-      public CannedResultSet withColNames(String...colNames) {
-        this.colNames = colNames;
-        return this;
-      }
-
-      @Override
-      public ColumnDefinitions getColumnDefinitions() {
-        return columnDefinitions;
-      }
-
-      @Override
-      public Row one() {
-        if (curRowNum < cannedRows.length) {
-          curRowNum++;
-          curCannedRow = cannedRows[curRowNum - 1];
-          return curCannedRow;
-        } else {
-          // TODO - do we throw something here?
-          return null;
-        }
-      }
-
-      @Override
-      public List<Row> all() {
-        return Arrays.asList((Row[])cannedRows);
-      }
-
-      @Override
-      public Iterator<Row> iterator() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
-      }
-
-      @Override
-      public int getAvailableWithoutFetching() {
-        return 0;  //To change body of implemented methods use File | Settings | File Templates.
-      }
-
-      @Override
-      public boolean isFullyFetched() {
-        return false;  //To change body of implemented methods use File | Settings | File Templates.
-      }
-
-      @Override
-      public ListenableFuture<Void> fetchMoreResults() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
-      }
-
-      @Override
-      public ExecutionInfo getExecutionInfo() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
-      }
-
-      @Override
-      public List<ExecutionInfo> getAllExecutionInfo() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
-      }
-
-      @Override
-      public boolean isExhausted() {
-        return curRowNum >= cannedRows.length;
-      }
-
-    }
-      private static class CannedRow implements com.datastax.driver.core.Row {
-
-        Object[] rowValues;
-
-        private CannedRow(Object...objects) {
-            rowValues = objects;
-        }
-
-
-        @Override
-        public ColumnDefinitions getColumnDefinitions() {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public boolean isNull(int i) {
-          return rowValues[i] == null;
-        }
-
-        @Override
-        public boolean isNull(String s) {
-          return false;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public boolean getBool(int i) {
-          return false;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public boolean getBool(String s) {
-          return false;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public int getInt(int i) {
-          return 0;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public int getInt(String s) {
-          return 0;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public long getLong(int i) {
-          return 0;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public long getLong(String s) {
-          return 0;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public Date getDate(int i) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public Date getDate(String s) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public float getFloat(int i) {
-          return 0;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public float getFloat(String s) {
-          return 0;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public double getDouble(int i) {
-          return 0;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public double getDouble(String s) {
-          return 0;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public ByteBuffer getBytesUnsafe(int i) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public ByteBuffer getBytesUnsafe(String s) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public ByteBuffer getBytes(int i) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public ByteBuffer getBytes(String s) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public String getString(int i) {
-          return rowValues[i].toString();
-        }
-
-        @Override
-        public String getString(String s) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public BigInteger getVarint(int i) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public BigInteger getVarint(String s) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public BigDecimal getDecimal(int i) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public BigDecimal getDecimal(String s) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public UUID getUUID(int i) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public UUID getUUID(String s) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public InetAddress getInet(int i) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public InetAddress getInet(String s) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public <T> List<T> getList(int i, Class<T> tClass) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public <T> List<T> getList(String s, Class<T> tClass) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public <T> Set<T> getSet(int i, Class<T> tClass) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public <T> Set<T> getSet(String s, Class<T> tClass) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public <K, V> Map<K, V> getMap(int i, Class<K> kClass, Class<V> vClass) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-
-        @Override
-        public <K, V> Map<K, V> getMap(String s, Class<K> kClass, Class<V> vClass) {
-          return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-     }
-
-    // Convenience method for cleaner code.  Why don't they have macros in Java???
-    private static CannedRow mkRow(Object... objects) {
-      return new CannedRow(objects);
-    }
+  // Convenience method for cleaner code.  Why don't they have macros in Java???
+  private static CannedRow mkRow(Object... objects) {
+    return new CannedRow(objects);
+  }
 
 
     public  CassandraResultSet makeTableTypes(CassandraStatement statement) throws SQLException
@@ -451,60 +140,36 @@ public  class MetadataResultSets
         // System.out.println(query.toString());
 
         String catalog = statement.connection.getCatalog();
-        Entry entryCatalog = new Entry("TABLE_CAT", bytes(catalog), Entry.ASCII_TYPE);
-        Entry entryTableType = new Entry("TABLE_TYPE", bytes(TABLE_CONSTANT), Entry.ASCII_TYPE);
-        Entry entryTypeCatalog = new Entry("TYPE_CAT", ByteBufferUtil.EMPTY_BYTE_BUFFER, Entry.ASCII_TYPE);
-        Entry entryTypeSchema = new Entry("TYPE_SCHEM", ByteBufferUtil.EMPTY_BYTE_BUFFER, Entry.ASCII_TYPE);
-        Entry entryTypeName = new Entry("TYPE_NAME", ByteBufferUtil.EMPTY_BYTE_BUFFER, Entry.ASCII_TYPE);
-        Entry entrySRCN = new Entry("SELF_REFERENCING_COL_NAME", ByteBufferUtil.EMPTY_BYTE_BUFFER, Entry.ASCII_TYPE);
-        Entry entryRefGeneration = new Entry("REF_GENERATION", ByteBufferUtil.EMPTY_BYTE_BUFFER, Entry.ASCII_TYPE);
 
         CassandraResultSet result;
-        List<Entry> col;
-        List<List<Entry>> rows = new ArrayList<List<Entry>>();
-        
-        // determine the schemas
+
+        ArrayList<CannedRow> cannedRows = new ArrayList<CannedRow>();
+
+
+      // determine the schemas
         result = (CassandraResultSet)statement.executeQuery(query.toString());
                 
         while (result.next())
         {
-            Entry entrySchema = new Entry("TABLE_SCHEM", bytes(result.getString(1)), Entry.ASCII_TYPE);
-            Entry entryTableName = new Entry("TABLE_NAME",
-                (result.getString(2) == null) ? ByteBufferUtil.EMPTY_BYTE_BUFFER : bytes(result.getString(2)),
-                Entry.ASCII_TYPE);
-            Entry entryRemarks = new Entry("REMARKS",
-                (result.getString(3) == null) ? ByteBufferUtil.EMPTY_BYTE_BUFFER : bytes(result.getString(3)),
-                Entry.ASCII_TYPE);
-            col = new ArrayList<Entry>();
-            col.add(entryCatalog);
-            col.add(entrySchema);
-            col.add(entryTableName);
-            col.add(entryTableType);
-            col.add(entryRemarks);
-            col.add(entryTypeCatalog);
-            col.add(entryTypeSchema);
-            col.add(entryTypeName);
-            col.add(entrySRCN);
-            col.add(entryRefGeneration);
-            rows.add(col);
+           cannedRows.add(mkRow(catalog,    // TABLE_CAT
+                   result.getString(1),     // TABLE_SCHEM
+                   result.getString(2),     // TABLE_NAME
+                   null,                    // TABLE_TYPE
+                   result.getString(3),     // REMARKS
+                   null,                    // TYPE_CAT
+                   null,                    // TYPE_SCHEM
+                   null,                    // TYPE_NAME
+                   null,                    // SELF_REFERENCING_COL_NAME
+                   null                     // REF_GENERATION
+           ));
         }
 
-        // just return the empty result if there were no rows
-//        if (rows.isEmpty()) return result;
-//        // use schemas with the key in column number 2 (one based)
-//        CqlResult cqlresult;
-//        try
-//        {
-//            cqlresult = makeCqlResult(rows, 1);
-//        }
-//        catch (CharacterCodingException e)
-//        {
-//            throw new SQLTransientException(e);
-//        }
-//
-//        result = new CassandraResultSet(statement, cqlresult);
-//        return result;
-      return null;
+      CannedResultSet cr = new CannedResultSet()
+                  .withColNames("TABLE_CAT","TABLE_SCHEM","TABLE_NAME","TABLE_TYPE","REMARKS","TYPE_CAT","TYPE_SCHEM","TYPE_NAME","SELF_REFERENCING_COL_NAME","REF_GENERATION")
+                  .withRows(cannedRows.toArray(new CannedRow[cannedRows.size()]));
+
+      result = new CassandraResultSet(statement, cr);
+      return result;
     }
         
     public CassandraResultSet makeColumns(CassandraStatement statement, String schemaPattern, String tableNamePattern, String columnNamePattern) throws SQLException
