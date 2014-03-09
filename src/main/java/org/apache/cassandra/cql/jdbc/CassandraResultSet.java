@@ -37,6 +37,8 @@ import com.datastax.driver.core.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
+
 /**
  * <p>
  * The Supported Data types in CQL are as follows:
@@ -127,6 +129,8 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
     public static final int DEFAULT_TYPE = ResultSet.TYPE_FORWARD_ONLY;
     public static final int DEFAULT_CONCURRENCY = ResultSet.CONCUR_READ_ONLY;
     public static final int DEFAULT_HOLDABILITY = ResultSet.HOLD_CURSORS_OVER_COMMIT;
+
+    private static final Map<Class<?>, AbstractJdbcType > jdbcTypeMap = new HashMap<Class<?>, AbstractJdbcType>();
 
     /**
      * The rows iterator.
@@ -1145,7 +1149,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         public int getColumnDisplaySize(int column) throws SQLException
         {
             checkIndex(column);
-            String stringValue = values.get(column - 1).getValueString();
+            String stringValue = getString(column);
             return (stringValue == null ? -1 : stringValue.length());
         }
 
