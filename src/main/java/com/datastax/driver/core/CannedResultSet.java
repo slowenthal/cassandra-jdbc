@@ -32,34 +32,7 @@ public class CannedResultSet implements com.datastax.driver.core.ResultSet {
   }
 
   public CannedResultSet withRows(CannedRow... cannedRows) {
-    if (colNames == null) {
-      // We need the column names first
-      // TODO - throw something
-    }
     this.cannedRows = cannedRows;
-
-    // Populate JDBCTypes off the first row
-    if (cannedRows.length > 0) {
-
-      Object[] row1Values = cannedRows[0].rowValues;
-      com.datastax.driver.core.ColumnDefinitions.Definition[] defs
-              = new com.datastax.driver.core.ColumnDefinitions.Definition[row1Values.length];
-      for (int i = 0; i < row1Values.length; i++) {
-          DataType dataType;
-          if (row1Values[i] == null) {
-            dataType = DataType.text();   // TODO - may be good enough
-          } else if (row1Values[i].getClass() == int.class) {
-            dataType = DataType.cint();
-          } else if (row1Values[i].getClass() == boolean.class) {
-            dataType = DataType.cboolean();
-          } else {  // May be good enough.  Most things are text
-            // TODO Build this out
-            dataType = DataType.text();
-          }
-          defs[i] = new CannedDefinition("","",colNames[i], dataType);     // TODO - What goes in the empty quotes
-      }
-      columnDefinitions = new CannedColumnDefinitions(defs);
-    }
 
     return this;
   }
@@ -67,6 +40,24 @@ public class CannedResultSet implements com.datastax.driver.core.ResultSet {
 
   public CannedResultSet withColNames(String...colNames) {
     this.colNames = colNames;
+    return this;
+  }
+
+  public CannedResultSet withDataTypes(DataType...dataTypes) {
+    if (colNames == null) {
+      // We need the column names first
+      // TODO - throw something
+    }
+
+      com.datastax.driver.core.ColumnDefinitions.Definition[] defs
+              = new com.datastax.driver.core.ColumnDefinitions.Definition[dataTypes.length];
+    int i = 0;
+    for (DataType dt : dataTypes) {
+      defs[i] = new CannedDefinition("","",colNames[i], dt);
+      i++;
+    }
+
+    columnDefinitions = new CannedColumnDefinitions(defs);
     return this;
   }
 

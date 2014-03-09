@@ -51,7 +51,8 @@ public  class MetadataResultSets
     {
         CannedResultSet cr = new CannedResultSet()
                 .withColNames("TABLE_CAT")
-                .withRows(mkRow(TABLE_CONSTANT));
+                .withRows(mkRow(TABLE_CONSTANT))
+                .withDataTypes(DataType.text());
 
         return new CassandraResultSet(statement,cr);
     }
@@ -60,7 +61,8 @@ public  class MetadataResultSets
   {
     CannedResultSet cr = new CannedResultSet()
             .withColNames("TABLE_CATALOG")
-            .withRows(mkRow(statement.connection.getCatalog()));
+            .withRows(mkRow(statement.connection.getCatalog()))
+            .withDataTypes(DataType.text());
 
     return new CassandraResultSet(statement,cr);
   }
@@ -92,7 +94,8 @@ public  class MetadataResultSets
         // use schemas with the key in column number 2 (one based)
         CannedResultSet cr = new CannedResultSet()
                 .withColNames("TABLE_SCHEME","TABLE_CATALOG")
-                .withRows(cannedRows.toArray(new CannedRow[cannedRows.size()]));
+                .withRows(cannedRows.toArray(new CannedRow[cannedRows.size()]))
+                .withDataTypes(DataType.text(), DataType.text());
 
 
       result = new CassandraResultSet(statement,cr);
@@ -135,7 +138,7 @@ public  class MetadataResultSets
                 if (filterCount > 0) query.append(" AND ");
             }
             if (tableNamePattern != null) query.append(String.format(expr, "columnfamily_name", tableNamePattern));
-            query.append(" ALLOW FILTERING");
+            query.append(" ALLOW FILTERING;");
         }
         // System.out.println(query.toString());
 
@@ -165,8 +168,9 @@ public  class MetadataResultSets
         }
 
       CannedResultSet cr = new CannedResultSet()
-                  .withColNames("TABLE_CAT","TABLE_SCHEM","TABLE_NAME","TABLE_TYPE","REMARKS","TYPE_CAT","TYPE_SCHEM","TYPE_NAME","SELF_REFERENCING_COL_NAME","REF_GENERATION")
-                  .withRows(cannedRows.toArray(new CannedRow[cannedRows.size()]));
+              .withColNames("TABLE_CAT","TABLE_SCHEM","TABLE_NAME","TABLE_TYPE","REMARKS","TYPE_CAT","TYPE_SCHEM","TYPE_NAME","SELF_REFERENCING_COL_NAME","REF_GENERATION")
+              .withRows(cannedRows.toArray(new CannedRow[cannedRows.size()]))
+              .withDataTypes(DataType.text(), DataType.text(), DataType.text(), DataType.text(), DataType.text(), DataType.text(), DataType.text(), DataType.text(), DataType.text(), DataType.text());
 
       result = new CassandraResultSet(statement, cr);
       return result;
