@@ -162,6 +162,8 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
     private Row curRow;
 
+    private final AbstractJdbcType[] jdbcTypes;
+
     /**
      * no argument constructor.
      */
@@ -169,6 +171,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
     {
         statement = null;
         meta = new CResultSetMetaData();
+        jdbcTypes = null;
     }
 
     /**
@@ -186,7 +189,19 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         // re-Initialize meta-data to column values from the first row (if data exists)
         // NOTE: that the first call to next() will HARMLESSLY re-write these values for the columns
         // NOTE: the row cursor is not advanced and sits before the first row
-        meta = new CResultSetMetaData();   // TODO - What is this for??
+        meta = new CResultSetMetaData();
+
+        jdbcTypes = getJdbcTypes();
+    }
+
+    AbstractJdbcType[] getJdbcTypes() {
+      AbstractJdbcType[] jdbcTypes = new AbstractJdbcType[schema.size()];
+
+      for (int i = 0; i < schema.size(); i++) {
+         jdbcTypes[i] =  null;
+      }
+
+      return jdbcTypes;
     }
 
 
@@ -1164,16 +1179,18 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
         public int getPrecision(int column) throws SQLException
         {
-            checkIndex(column);
-            TypedColumn col = values.get(column - 1);
-            return col.getValueType().getPrecision(col.getValue());
+          // TODO - FIX THIS
+//            checkIndex(column);
+//            return col.getValueType().getPrecision(col.getValue());
+            return 0;
         }
 
         public int getScale(int column) throws SQLException
         {
+          // Todo - FIX THIS
             checkIndex(column);
-            TypedColumn tc = values.get(column - 1);
-            return tc.getValueType().getScale(tc.getValue());
+           // return tc.getValueType().getScale(tc.getValue());
+            return 0;
         }
 
         /**
@@ -1204,11 +1221,10 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
             return true;
         }
 
-        public boolean isCurrency(int column) throws SQLException
+        public boolean isCurrency(int index) throws SQLException
         {
-            checkIndex(column);
-            TypedColumn tc = values.get(column - 1);
-            return tc.getValueType().isCurrency();
+            checkIndex(index);
+            return jdbcTypes[index - 1].isCurrency();
         }
 
         public boolean isDefinitelyWritable(int column) throws SQLException
@@ -1241,8 +1257,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         public boolean isSigned(int column) throws SQLException
         {
             checkIndex(column);
-            TypedColumn tc = values.get(column - 1);
-            return tc.getValueType().isSigned();
+            return jdbcTypes[column - 1].isSigned();
         }
 
         public boolean isWrapperFor(Class<?> iface) throws SQLException
