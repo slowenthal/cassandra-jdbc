@@ -23,6 +23,9 @@ package org.apache.cassandra.cql.jdbc;
 import static org.apache.cassandra.utils.ByteBufferUtil.bytes;
 import static org.apache.cassandra.utils.ByteBufferUtil.string;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.sql.DatabaseMetaData;
@@ -30,12 +33,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLTransientException;
 import java.sql.Types;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
+import com.datastax.driver.core.ColumnDefinitions;
+import com.datastax.driver.core.ExecutionInfo;
+import com.datastax.driver.core.Row;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.cassandra.utils.ByteBufferUtil;
 
 
@@ -49,178 +52,319 @@ public  class MetadataResultSets
     
     // Private Constructor
     private MetadataResultSets() {}
-    
-    /**
-     * Make a {@code Column} from a column name and a value.
-     * 
-     * @param name
-     *          the name of the column
-     * @param value
-     *          the value of the column as a {@code ByteBufffer}
-     * 
-     * @return {@code Column}
-     */
-
-    private static CqlMetadata makeMetadataAllString(List<String> colNameList)
-    {
-        Map<ByteBuffer,String> namesMap = new HashMap<ByteBuffer,String>();
-        Map<ByteBuffer,String> valuesMap = new HashMap<ByteBuffer,String>();
-        
-        for (String name : colNameList)
-        {
-            namesMap.put(bytes(name), Entry.ASCII_TYPE);
-            valuesMap.put(bytes(name), Entry.UTF8_TYPE);
-        }
-        
-        return new CqlMetadata(namesMap,valuesMap,Entry.ASCII_TYPE,Entry.UTF8_TYPE);
-    }
-
-    private static CqlMetadata makeMetadata(List<Entry> entries)
-    {
-        Map<ByteBuffer,String> namesMap = new HashMap<ByteBuffer,String>();
-        Map<ByteBuffer,String> valuesMap = new HashMap<ByteBuffer,String>();
-        
-        for (Entry entry : entries)
-        {
-            namesMap.put(bytes(entry.name), Entry.ASCII_TYPE);
-            valuesMap.put(bytes(entry.name), entry.type);
-        }
-        
-        return new CqlMetadata(namesMap,valuesMap,Entry.ASCII_TYPE,Entry.UTF8_TYPE);
-    }
 
 
-    private CqlResult makeCqlResult(Entry[][] rowsOfcolsOfKvps, int position)
-    {
-        CqlResult result = new CqlResult(CqlResultType.ROWS);
-        CqlMetadata meta = null;
-        CqlRow row = null;
-        Column column = null;
-        List<Column> columnlist = new LinkedList<Column>();
-        List<CqlRow> rowlist = new LinkedList<CqlRow>();
-        List<String> colNamesList = new ArrayList<String>();
-        
-        
-        for (int rowcnt = 0; rowcnt < rowsOfcolsOfKvps.length; rowcnt++ )
-        {
-            colNamesList = new ArrayList<String>();
-            columnlist = new LinkedList<Column>();
-            for (int colcnt = 0; colcnt < rowsOfcolsOfKvps[0].length; colcnt++ )
-            {
-                column = makeColumn(rowsOfcolsOfKvps[rowcnt][colcnt].name,rowsOfcolsOfKvps[rowcnt][colcnt].value);
-                columnlist.add(column);
-                colNamesList.add(rowsOfcolsOfKvps[rowcnt][colcnt].name);
-            }
-            row = makeRow(rowsOfcolsOfKvps[rowcnt][position-1].name,columnlist);
-            rowlist.add(row);
+    private static class CannedResultSet implements com.datastax.driver.core.ResultSet {
+
+      List<CannedRow> values;
+      List<String> ColNames;
+      int curRow;
+
+      private CannedResultSet(List<CannedRow> values) {
+        this.values = values;
+        curRow = 0;
+      }
+
+      @Override
+      public ColumnDefinitions getColumnDefinitions() {
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
+      }
+
+      @Override
+      public Row one() {
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
+      }
+
+      @Override
+      public List<Row> all() {
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
+      }
+
+      @Override
+      public Iterator<Row> iterator() {
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
+      }
+
+      @Override
+      public int getAvailableWithoutFetching() {
+        return 0;  //To change body of implemented methods use File | Settings | File Templates.
+      }
+
+      @Override
+      public boolean isFullyFetched() {
+        return false;  //To change body of implemented methods use File | Settings | File Templates.
+      }
+
+      @Override
+      public ListenableFuture<Void> fetchMoreResults() {
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
+      }
+
+      @Override
+      public ExecutionInfo getExecutionInfo() {
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
+      }
+
+      @Override
+      public List<ExecutionInfo> getAllExecutionInfo() {
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
+      }
+
+      @Override
+      public boolean isExhausted() {
+        return curRow > values.size();
+      }
+
+
+      private static class CannedRow implements com.datastax.driver.core.Row {
+        @Override
+        public ColumnDefinitions getColumnDefinitions() {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
         }
-        
-        meta = makeMetadataAllString(colNamesList);
-        result.setSchema(meta).setRows(rowlist);
-        return result;
-    }
-    
-    private CqlResult makeCqlResult(List<List<Entry>> rows, int position) throws CharacterCodingException
-    {
-        CqlResult result = new CqlResult(CqlResultType.ROWS);
-        CqlMetadata meta = null;
-        CqlRow row = null;
-        Column column = null;
-        List<Column> columnlist = new LinkedList<Column>();
-        List<CqlRow> rowlist = new LinkedList<CqlRow>();
-        
-        assert(!rows.isEmpty());
-        
-        for (List<Entry> aRow : rows )
-        {
-            columnlist = new LinkedList<Column>();
-            
-            assert (!aRow.isEmpty());
-            
-            // only need to do it once
-            if (meta == null) meta = makeMetadata(aRow);
-            
-            for (Entry entry : aRow )
-            {
-                column = makeColumn(entry.name,entry.value);
-                columnlist.add(column);
-            }
-            row = makeRow(string(columnlist.get(position-1).name),columnlist);
-            rowlist.add(row);
+
+        @Override
+        public boolean isNull(int i) {
+          return false;  //To change body of implemented methods use File | Settings | File Templates.
         }
-        
-        result.setSchema(meta).setRows(rowlist);
-        return result;
+
+        @Override
+        public boolean isNull(String s) {
+          return false;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public boolean getBool(int i) {
+          return false;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public boolean getBool(String s) {
+          return false;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public int getInt(int i) {
+          return 0;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public int getInt(String s) {
+          return 0;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public long getLong(int i) {
+          return 0;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public long getLong(String s) {
+          return 0;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public Date getDate(int i) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public Date getDate(String s) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public float getFloat(int i) {
+          return 0;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public float getFloat(String s) {
+          return 0;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public double getDouble(int i) {
+          return 0;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public double getDouble(String s) {
+          return 0;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public ByteBuffer getBytesUnsafe(int i) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public ByteBuffer getBytesUnsafe(String s) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public ByteBuffer getBytes(int i) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public ByteBuffer getBytes(String s) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public String getString(int i) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public String getString(String s) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public BigInteger getVarint(int i) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public BigInteger getVarint(String s) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public BigDecimal getDecimal(int i) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public BigDecimal getDecimal(String s) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public UUID getUUID(int i) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public UUID getUUID(String s) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public InetAddress getInet(int i) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public InetAddress getInet(String s) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public <T> List<T> getList(int i, Class<T> tClass) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public <T> List<T> getList(String s, Class<T> tClass) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public <T> Set<T> getSet(int i, Class<T> tClass) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public <T> Set<T> getSet(String s, Class<T> tClass) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public <K, V> Map<K, V> getMap(int i, Class<K> kClass, Class<V> vClass) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public <K, V> Map<K, V> getMap(String s, Class<K> kClass, Class<V> vClass) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+      }
     }
- 
-    
+
+
 
     public  CassandraResultSet makeTableTypes(CassandraStatement statement) throws SQLException
     {
         final  Entry[][] tableTypes = { { new Entry("TABLE_TYPE",bytes(TABLE_CONSTANT),Entry.ASCII_TYPE)} };
-        
-        // use tableTypes with the key in column number 1 (one based)
-        CqlResult cqlresult =  makeCqlResult(tableTypes, 1);
-        
-        CassandraResultSet result = new CassandraResultSet(statement,cqlresult);
-        return result;
+
+//        // use tableTypes with the key in column number 1 (one based)
+//        CqlResult cqlresult =  makeCqlResult(tableTypes, 1);
+//
+//        CassandraResultSet result = new CassandraResultSet(statement,cqlresult);
+//        return result;
+      return null;
     }
 
     public  CassandraResultSet makeCatalogs(CassandraStatement statement) throws SQLException
     {
         final Entry[][] catalogs = { { new Entry("TABLE_CAT",bytes(statement.connection.getCatalog()),Entry.ASCII_TYPE)} };
 
-        // use catalogs with the key in column number 1 (one based)
-        CqlResult cqlresult =  makeCqlResult(catalogs, 1);
-        
-        CassandraResultSet result = new CassandraResultSet(statement,cqlresult);
-        return result;
+//        // use catalogs with the key in column number 1 (one based)
+//        CqlResult cqlresult =  makeCqlResult(catalogs, 1);
+//
+//        CassandraResultSet result = new CassandraResultSet(statement,cqlresult);
+//        return result;
+      return null;
     }
     
     public  CassandraResultSet makeSchemas(CassandraStatement statement, String schemaPattern) throws SQLException
     {
-        if ("%".equals(schemaPattern)) schemaPattern = null;
-
-        // TABLE_SCHEM String => schema name
-        // TABLE_CATALOG String => catalog name (may be null)
-        
-        String query = "SELECT keyspace_name FROM system.schema_keyspaces";
-        if (schemaPattern!=null) query = query + " where keyspace_name = '" + schemaPattern + "'";
-
-        String catalog = statement.connection.getCatalog();
-        Entry entryCatalog = new Entry("TABLE_CATALOG",bytes(catalog),Entry.ASCII_TYPE);
-        
-        CassandraResultSet result;
-        List<Entry> col;
-        List<List<Entry>> rows = new ArrayList<List<Entry>>();
-        // determine the schemas
-        result = (CassandraResultSet)statement.executeQuery(query);
-        
-        while (result.next())
-        {
-            Entry entrySchema = new Entry("TABLE_SCHEM",bytes(result.getString(1)),Entry.ASCII_TYPE);
-            col = new ArrayList<Entry>();
-            col.add(entrySchema);
-            col.add(entryCatalog);
-            rows.add(col);
-        }
-        
-        // just return the empty result if there were no rows
-        if (rows.isEmpty() )return result;
-
-        // use schemas with the key in column number 2 (one based)
-        CqlResult cqlresult;
-        try
-        {
-            cqlresult = makeCqlResult(rows, 1);
-        }
-        catch (CharacterCodingException e)
-        {
-            throw new SQLTransientException(e);
-        }
-        
-        result = new CassandraResultSet(statement,cqlresult);
-        return result;
+//        if ("%".equals(schemaPattern)) schemaPattern = null;
+//
+//        // TABLE_SCHEM String => schema name
+//        // TABLE_CATALOG String => catalog name (may be null)
+//
+//        String query = "SELECT keyspace_name FROM system.schema_keyspaces";
+//        if (schemaPattern!=null) query = query + " where keyspace_name = '" + schemaPattern + "'";
+//
+//        String catalog = statement.connection.getCatalog();
+//        Entry entryCatalog = new Entry("TABLE_CATALOG",bytes(catalog),Entry.ASCII_TYPE);
+//
+//        CassandraResultSet result;
+//        List<Entry> col;
+//        List<List<Entry>> rows = new ArrayList<List<Entry>>();
+//        // determine the schemas
+//        result = (CassandraResultSet)statement.executeQuery(query);
+//
+//        while (result.next())
+//        {
+//            Entry entrySchema = new Entry("TABLE_SCHEM",bytes(result.getString(1)),Entry.ASCII_TYPE);
+//            col = new ArrayList<Entry>();
+//            col.add(entrySchema);
+//            col.add(entryCatalog);
+//            rows.add(col);
+//        }
+//
+//        // just return the empty result if there were no rows
+//        if (rows.isEmpty() )return result;
+//
+//        // use schemas with the key in column number 2 (one based)
+//        CqlResult cqlresult;
+//        try
+//        {
+//            cqlresult = makeCqlResult(rows, 1);
+//        }
+//        catch (CharacterCodingException e)
+//        {
+//            throw new SQLTransientException(e);
+//        }
+//
+//        result = new CassandraResultSet(statement,cqlresult);
+//        return result;
+      return null;
     }
     
     public CassandraResultSet makeTables(CassandraStatement statement, String schemaPattern, String tableNamePattern) throws SQLException
@@ -303,20 +447,21 @@ public  class MetadataResultSets
         }
 
         // just return the empty result if there were no rows
-        if (rows.isEmpty()) return result;
-        // use schemas with the key in column number 2 (one based)
-        CqlResult cqlresult;
-        try
-        {
-            cqlresult = makeCqlResult(rows, 1);
-        }
-        catch (CharacterCodingException e)
-        {
-            throw new SQLTransientException(e);
-        }
-
-        result = new CassandraResultSet(statement, cqlresult);
-        return result;
+//        if (rows.isEmpty()) return result;
+//        // use schemas with the key in column number 2 (one based)
+//        CqlResult cqlresult;
+//        try
+//        {
+//            cqlresult = makeCqlResult(rows, 1);
+//        }
+//        catch (CharacterCodingException e)
+//        {
+//            throw new SQLTransientException(e);
+//        }
+//
+//        result = new CassandraResultSet(statement, cqlresult);
+//        return result;
+      return null;
     }
         
     public CassandraResultSet makeColumns(CassandraStatement statement, String schemaPattern, String tableNamePattern, String columnNamePattern) throws SQLException
@@ -544,22 +689,23 @@ public  class MetadataResultSets
             rows.add(col);
         }
 
-        // just return the empty result if there were no rows
-        if (rows.isEmpty()) return result;
-
-        // use schemas with the key in column number 2 (one based)
-        CqlResult cqlresult;
-        try
-        {
-            cqlresult = makeCqlResult(rows, 1);
-        }
-        catch (CharacterCodingException e)
-        {
-            throw new SQLTransientException(e);
-        }
-
-        result = new CassandraResultSet(statement, cqlresult);
-        return result;
+//        // just return the empty result if there were no rows
+//        if (rows.isEmpty()) return result;
+//
+//        // use schemas with the key in column number 2 (one based)
+//        CqlResult cqlresult;
+//        try
+//        {
+//            cqlresult = makeCqlResult(rows, 1);
+//        }
+//        catch (CharacterCodingException e)
+//        {
+//            throw new SQLTransientException(e);
+//        }
+//
+//        result = new CassandraResultSet(statement, cqlresult);
+//        return result;
+      return null;
     }
     
     public CassandraResultSet makeIndexes(CassandraStatement statement, String schema, String table, boolean unique, boolean approximate) throws SQLException
@@ -656,19 +802,20 @@ public  class MetadataResultSets
 	    // just return the empty result if there were no rows
 	    if (rows.isEmpty()) return result;
 	
-	    // use schemas with the key in column number 2 (one based)
-	    CqlResult cqlresult;
-	    try
-	    {
-	        cqlresult = makeCqlResult(rows, 1);
-	    }
-	    catch (CharacterCodingException e)
-	    {
-	        throw new SQLTransientException(e);
-	    }
-	
-	    result = new CassandraResultSet(statement, cqlresult);
-	    return result;
+//	    // use schemas with the key in column number 2 (one based)
+//	    CqlResult cqlresult;
+//	    try
+//	    {
+//	        cqlresult = makeCqlResult(rows, 1);
+//	    }
+//	    catch (CharacterCodingException e)
+//	    {
+//	        throw new SQLTransientException(e);
+//	    }
+//
+//	    result = new CassandraResultSet(statement, cqlresult);
+//	    return result;
+    return null;
 	}
 
 	public List<PKInfo> getPrimaryKeys(CassandraStatement statement, String schema, String table) throws SQLException
@@ -812,18 +959,19 @@ public  class MetadataResultSets
 	    // just return the empty result if there were no rows
 	    if (rows.isEmpty()) return new CassandraResultSet();
 	
-	    // use schemas with the key in column number 2 (one based)
-	    CqlResult cqlresult;
-	    try
-	    {
-	        cqlresult = makeCqlResult(rows, 1);
-	    }
-	    catch (CharacterCodingException e)
-	    {
-	        throw new SQLTransientException(e);
-	    }
-	
-	    return new CassandraResultSet(statement, cqlresult);
+//	    // use schemas with the key in column number 2 (one based)
+//	    CqlResult cqlresult;
+//	    try
+//	    {
+//	        cqlresult = makeCqlResult(rows, 1);
+//	    }
+//	    catch (CharacterCodingException e)
+//	    {
+//	        throw new SQLTransientException(e);
+//	    }
+//
+//	    return new CassandraResultSet(statement, cqlresult);
+    return null;
 	}
 
 	private class Entry

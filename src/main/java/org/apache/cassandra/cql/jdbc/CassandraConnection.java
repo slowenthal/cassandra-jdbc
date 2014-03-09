@@ -430,23 +430,16 @@ class CassandraConnection extends AbstractConnection implements Connection
     }
 
     // TODO - implement this
-    protected ResultSet execute(int itemId, List<ByteBuffer> values, ConsistencyLevel consistencyLevel)
+    protected ResultSet execute(com.datastax.driver.core.PreparedStatement ps, Map<Integer, Object> values, ConsistencyLevel consistencyLevel)
     {
-//        try
-//        {
-//            if (majorCqlVersion==3) return client.execute_prepared_cql3_query(itemId, values, consistencyLevel);
-//            else                    return client.execute_prepared_cql_query(itemId, values);
-//        }
-//        catch (TException error)
-//        {
-//            numFailures++;
-//            timeOfLastFailure = System.currentTimeMillis();
-//            throw error;
-//        }
-      return null;
+      Object[] valarray = new Object[values.size()];
+      for (int i = 1; i <= values.size(); i++) {
+        valarray[i-1] = values.get(i);
+      }
+      BoundStatement bs = ps.bind(valarray);
+      bs.setConsistencyLevel(consistencyLevel);
+      return session.execute(bs);
     }
-    
-
     
     protected com.datastax.driver.core.PreparedStatement prepare(String queryStr, ConsistencyLevel consistencyLevel) throws Exception
     {
