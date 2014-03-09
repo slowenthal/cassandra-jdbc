@@ -36,7 +36,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.cassandra.cql.ConnectionDetails;
-import org.apache.cassandra.thrift.ConsistencyLevel;
+import com.datastax.driver.core.ConsistencyLevel;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;

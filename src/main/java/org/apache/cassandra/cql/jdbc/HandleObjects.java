@@ -79,7 +79,7 @@ public class HandleObjects
         map.put(UUID.class, JdbcUUID.instance);
     }
 
-    private static AbstractJdbcType<?> getType(Class<?> elementClass) throws SQLException
+    public static AbstractJdbcType<?> getType(Class<?> elementClass) throws SQLException
     {
         AbstractJdbcType<?> type = map.get(elementClass);
     //    if (type==null) throw new SQLRecoverableException(String.format("unsupported Collection element type:  '%s' for CQL", elementClass));

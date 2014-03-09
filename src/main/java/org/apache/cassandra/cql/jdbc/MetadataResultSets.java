@@ -36,12 +36,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.cassandra.thrift.Column;
-import org.apache.cassandra.thrift.CqlMetadata;
-import org.apache.cassandra.thrift.CqlResult;
-import org.apache.cassandra.thrift.CqlResultType;
-import org.apache.cassandra.thrift.CqlRow;
 import org.apache.cassandra.utils.ByteBufferUtil;
 
 
@@ -66,16 +60,7 @@ public  class MetadataResultSets
      * 
      * @return {@code Column}
      */
-    private static final Column makeColumn(String name, ByteBuffer value)
-    {
-      return new Column(bytes(name)).setValue(value).setTimestamp(System.currentTimeMillis());
-    }
 
-    private static final CqlRow makeRow(String key, List<Column> columnList)
-    {
-      return new CqlRow(bytes(key), columnList);
-    }
-    
     private static CqlMetadata makeMetadataAllString(List<String> colNameList)
     {
         Map<ByteBuffer,String> namesMap = new HashMap<ByteBuffer,String>();
@@ -201,7 +186,7 @@ public  class MetadataResultSets
         
         String query = "SELECT keyspace_name FROM system.schema_keyspaces";
         if (schemaPattern!=null) query = query + " where keyspace_name = '" + schemaPattern + "'";
-        
+
         String catalog = statement.connection.getCatalog();
         Entry entryCatalog = new Entry("TABLE_CATALOG",bytes(catalog),Entry.ASCII_TYPE);
         

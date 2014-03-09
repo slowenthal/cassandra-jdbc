@@ -44,6 +44,7 @@ import java.util.logging.Logger;
 
 import javax.sql.ConnectionPoolDataSource;
 import javax.sql.DataSource;
+import javax.sql.PooledConnection;
 
 public class CassandraDataSource implements ConnectionPoolDataSource, DataSource
 {
@@ -224,14 +225,14 @@ public class CassandraDataSource implements ConnectionPoolDataSource, DataSource
     }
 
 	@Override
-	public PooledCassandraConnection getPooledConnection() throws SQLException
+	public PooledConnection getPooledConnection() throws SQLException
 	{
-		return new PooledCassandraConnection(getConnection());
+		return null; // TODO FIX new PooledCassandraConnection(getConnection());
 	}
 
 	@Override
-	public PooledCassandraConnection getPooledConnection(String user, String password) throws SQLException
+	public PooledConnection getPooledConnection(String user, String password) throws SQLException
 	{
-		return new PooledCassandraConnection(getConnection(user, password));
+		return null; // TODO FIX - new PooledCassandraConnection(getConnection(user, password));
 	}
 }

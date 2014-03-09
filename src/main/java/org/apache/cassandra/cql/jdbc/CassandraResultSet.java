@@ -130,8 +130,6 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
     public static final int DEFAULT_CONCURRENCY = ResultSet.CONCUR_READ_ONLY;
     public static final int DEFAULT_HOLDABILITY = ResultSet.HOLD_CURSORS_OVER_COMMIT;
 
-    private static final Map<Class<?>, AbstractJdbcType > jdbcTypeMap = new HashMap<Class<?>, AbstractJdbcType>();
-
     /**
      * The rows iterator.
      */
@@ -202,14 +200,18 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
       AbstractJdbcType[] jdbcTypes = new AbstractJdbcType[schema.size()];
 
       for (int i = 0; i < schema.size(); i++) {
-         jdbcTypes[i] =  null;
+        try {
+          jdbcTypes[i] =  HandleObjects.getType(schema.getType(i).asJavaClass());
+        } catch (SQLException e) {
+          jdbcTypes[i] = null;
+        }
       }
 
       return jdbcTypes;
     }
 
 
-    private final boolean hasMoreRows()
+    private boolean hasMoreRows()
     {
         return (!cResultSet.isExhausted());
     }
@@ -231,18 +233,18 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         throw new SQLFeatureNotSupportedException(NOT_SUPPORTED);
     }
 
-    private final void checkIndex(int index) throws SQLException
+    private void checkIndex(int index) throws SQLException
     {
         // 1 <= index <= size()
         if (index < 1 || index > schema.size()) throw new SQLSyntaxErrorException(String.format(MUST_BE_POSITIVE, String.valueOf(index)) + " " + schema.size());
     }
 
-    private final void checkName(String name) throws SQLException
+    private void checkName(String name) throws SQLException
     {
         if (!schema.contains(name)) throw new SQLSyntaxErrorException(String.format(VALID_LABELS, name));
     }
 
-    private final void checkNotClosed() throws SQLException
+    private void checkNotClosed() throws SQLException
     {
         if (isClosed()) throw new SQLRecoverableException(WAS_CLOSED_RSLT);
     }

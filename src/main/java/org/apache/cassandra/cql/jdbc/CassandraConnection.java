@@ -179,7 +179,11 @@ class CassandraConnection extends AbstractConnection implements Connection
         if (isClosed()) throw new SQLNonTransientConnectionException(WAS_CLOSED_CON);
     }
 
-    public void clearWarnings() throws SQLException
+  Session getSession() {
+    return session;
+  }
+
+  public void clearWarnings() throws SQLException
     {
         // This implementation does not support the collection of warnings so clearing is a no-op
         // but it is still an exception to call this on a closed connection.
