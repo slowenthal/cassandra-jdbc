@@ -215,7 +215,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
     private final void checkIndex(int index) throws SQLException
     {
         // 1 <= index <= size()
-        if (index < 1 || index > schema.size()) throw new SQLSyntaxErrorException(String.format(MUST_BE_POSITIVE, String.valueOf(index)) + " " + values.size());
+        if (index < 1 || index > schema.size()) throw new SQLSyntaxErrorException(String.format(MUST_BE_POSITIVE, String.valueOf(index)) + " " + schema.size());
     }
 
     private final void checkName(String name) throws SQLException
@@ -255,7 +255,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
     public BigDecimal getBigDecimal(int index, int scale) throws SQLException
     {
         checkIndex(index);
-        return (getBigDecimal(index).setScale(scale);
+        return getBigDecimal(index).setScale(scale);
     }
 
     public BigDecimal getBigDecimal(String name) throws SQLException
@@ -268,7 +268,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
     public BigDecimal getBigDecimal(String name, int scale) throws SQLException
     {
         checkName(name);
-        return (getBigDecimal(name).setScale(scale);
+        return getBigDecimal(name).setScale(scale);
     }
 
     public BigDecimal getBigDecimal(int index) throws SQLException
@@ -340,7 +340,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         return getBoolean(schema.getIndexOf(name) + 1);
     }
 
-    public Boolean getBoolean(int index) throws SQLException
+    public boolean getBoolean(int index) throws SQLException
     {
         index --;  // SQL is 1 based - java driver is 0-based
         checkNotClosed();
@@ -532,7 +532,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
     public int getFetchSize() throws SQLException
     {
         checkNotClosed();
-        return fetchSize;
+        return statement.getFetchSize();
     }
 
     public float getFloat(String name) throws SQLException
@@ -993,18 +993,18 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
     public synchronized boolean next() throws SQLException
     {
-        if (hasMoreRows())
-        {
-            else
-          curRow = cResultSet.one();
-            rowNumber++;
-            return true;
-        }
-        else
-        {
-            rowNumber = Integer.MAX_VALUE;
-            return false;
-        }
+      if (hasMoreRows())
+      {
+
+        curRow = cResultSet.one();
+        rowNumber++;
+        return true;
+      }
+      else
+      {
+        rowNumber = Integer.MAX_VALUE;
+        return false;
+      }
     }
 
     private String bbToString(ByteBuffer buffer)
@@ -1086,7 +1086,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
     {
         checkNotClosed();
         if (size < 0) throw new SQLException(String.format(BAD_FETCH_SIZE, size));
-        fetchSize = size;
+        statement.setFetchSize(size);
     }
 
     public <T> T unwrap(Class<T> iface) throws SQLException
@@ -1192,15 +1192,16 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
         public boolean isAutoIncrement(int column) throws SQLException
         {
+            // TODO - double check this
             checkIndex(column);
-            return values.get(column - 1).getValueType() instanceof JdbcCounterColumn; // todo: check Value is correct.
+            return false; // todo: check Value is correct.
         }
 
         public boolean isCaseSensitive(int column) throws SQLException
         {
+            // TODO Double check this
             checkIndex(column);
-            TypedColumn tc = values.get(column - 1);
-            return tc.getValueType().isCaseSensitive();
+            return true;
         }
 
         public boolean isCurrency(int column) throws SQLException
