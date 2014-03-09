@@ -1163,9 +1163,8 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
         public int getColumnType(int column) throws SQLException
         {
-            // TODO - maybe cook up a map for this up front??
             checkIndex(column);
-            return values.get(column - 1).getValueType().getJdbcType();
+            return jdbcTypes[column].getJdbcType();
         }
 
         /**
