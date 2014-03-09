@@ -157,20 +157,12 @@ class CassandraStatement extends AbstractStatement implements CassandraStatement
             resetResults();
             com.datastax.driver.core.ResultSet rSet = connection.execute(cql, consistencyLevel);
 
-             currentResultSet = new CassandraResultSet(this,rSet);
-
-//            switch (rSet.getType())
-//            {
-//                case ROWS:
-//                    currentResultSet = rSet;
-//                    break;
-//                case INT:
-//                    updateCount = rSet.getNum();
-//                    break;
-//                case VOID:
-//                    updateCount = 0;
-//                    break;
-//            }
+             if (Utils.isDML(cql)) {
+               updateCount = 1;
+               currentResultSet = null;
+             } else {
+               currentResultSet = new CassandraResultSet(this, rSet);
+             }
         }
         // TODO - Fix exceptions
         catch (Exception e)
@@ -251,7 +243,7 @@ class CassandraStatement extends AbstractStatement implements CassandraStatement
     public Connection getConnection() throws SQLException
     {
         checkNotClosed();
-        return (Connection) connection;
+        return connection;
     }
 
     public int getFetchDirection() throws SQLException

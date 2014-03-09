@@ -63,7 +63,7 @@ public class SpashScreenTest
         
                
         // Create the target Column family
-        String create = "CREATE COLUMNFAMILY Test (KEY text PRIMARY KEY, a bigint, b bigint) ;";
+        String create = "CREATE TABLE Test (KEY text PRIMARY KEY, a bigint, b bigint) ;";
         stmt = con.createStatement();
         stmt.execute(create);
         stmt.close();

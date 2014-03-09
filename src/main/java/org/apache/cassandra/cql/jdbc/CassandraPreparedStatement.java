@@ -66,12 +66,15 @@ class CassandraPreparedStatement extends CassandraStatement implements PreparedS
     /** a Map of the current bound values encountered in setXXX methods */
     private Map<Integer, Object> bindValues = new LinkedHashMap<Integer, Object>();
 
+    private boolean isDML;
+
 
     CassandraPreparedStatement(CassandraConnection con, String cql) throws SQLException
     {
         this(con, cql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, ResultSet.HOLD_CURSORS_OVER_COMMIT);
     }
-    
+
+
     
     CassandraPreparedStatement(CassandraConnection con,
         String cql,
@@ -88,7 +91,9 @@ class CassandraPreparedStatement extends CassandraStatement implements PreparedS
 
            preparedStatement = result;   // TODO What's this
            count = result.getVariables().size();
+           isDML = Utils.isDML(cql);
        }
+
        // TODO - Fix this
 //       catch (InvalidRequestException e)
 //       {
@@ -132,18 +137,14 @@ class CassandraPreparedStatement extends CassandraStatement implements PreparedS
             resetResults();
             com.datastax.driver.core.ResultSet result = connection.execute(preparedStatement, bindValues, consistencyLevel);
 
-//            switch (result.getType())
-//            {
-//                case ROWS:
-                    currentResultSet = new CassandraResultSet(this,result);
-//                    break;
-//                case INT:
-//                    updateCount = result.getNum();
-//                    break;
-//                case VOID:
-//                    updateCount = 0;
-//                    break;
-//            }
+            if (isDML) {
+              currentResultSet = null;
+              updateCount = 1;
+            } else {
+              currentResultSet = new CassandraResultSet(this,result);
+
+            }
+
         }
         // TODO - fix exceptions
 //        catch (InvalidRequestException e)

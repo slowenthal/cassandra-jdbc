@@ -163,14 +163,15 @@ public class JdbcRegressionTest
        ResultSetMetaData metadata = result.getMetaData();
        
        int colCount = metadata.getColumnCount();
-       
-       System.out.println("Before doing a next()");
-       System.out.printf("(%d) ",result.getRow());
-       for (int i = 1; i <= colCount; i++)
-       {
-           System.out.print(showColumn(i,result)+ " "); 
-       }
-       System.out.println();
+
+      // TODO - probably remove - should not be able to examine row without a next.  Need to check semantics of this
+//       System.out.println("Before doing a next()");
+//       System.out.printf("(%d) ",result.getRow());
+//       for (int i = 1; i <= colCount; i++)
+//       {
+//           System.out.print(showColumn(i,result)+ " ");
+//       }
+//       System.out.println();
        
        
        System.out.println("Fetching each row with a next()");

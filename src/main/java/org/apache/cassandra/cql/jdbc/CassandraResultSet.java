@@ -984,7 +984,8 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
     public boolean isClosed() throws SQLException
     {
-        return cResultSet.isExhausted();
+      // TODO - FIX THIS - not sure when to consider it closed.
+        return false;
     }
 
     public boolean isFirst() throws SQLException

@@ -114,6 +114,11 @@ class Utils
 
     protected static final Logger logger = LoggerFactory.getLogger(Utils.class);
 
+  public static boolean isDML(String cql) {
+    String trimmed = cql.trim();
+    String firstWord = trimmed.substring(0,trimmed.indexOf(" ")).toUpperCase();
+    return firstWord.contentEquals("INSERT") || firstWord.contentEquals("UPDATE") || firstWord.contentEquals("DELETE");
+  }
 
     /**
      * Parse a URL for the Cassandra JDBC Driver
