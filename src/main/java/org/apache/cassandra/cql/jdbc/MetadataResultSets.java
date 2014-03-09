@@ -55,17 +55,21 @@ public  class MetadataResultSets
       private int curRowNum;
       private CannedRow curCannedRow;
       private AbstractJdbcType[] jdbcTypes;
-      private CannedColumnDefinitions schema;
+      private CannedColumnDefinitions columnDefinitions;
 
       private CannedResultSet() {
         cannedRows = null;
         curRowNum = 0;
         curCannedRow = null;
-        schema = null;
+        columnDefinitions = null;
         jdbcTypes = null;
       }
 
       private CannedResultSet withRows(CannedRow...cannedRows) {
+        if (colNames == null) {
+          // We need the column names first
+          // TODO - throw something
+        }
          this.cannedRows = cannedRows;
 
         // Populate JDBCTypes off the first row
@@ -86,15 +90,17 @@ public  class MetadataResultSets
                  // TODO Build this out
                  dataType = DataType.cint();
                }
-               defs[i] = new CannedDefinition("","","",dataType);
+               defs[i] = new CannedDefinition("","",colNames[i], dataType);
                jdbcTypes[i] = HandleObjects.getType(row1Values[i].getClass());
              } catch (SQLException e) {
                // TODO - do something better here
                e.printStackTrace();
              }
            }
-          schema = new CannedColumnDefinitions(defs);
+          columnDefinitions = new CannedColumnDefinitions(defs);
         }
+
+        return this;
       }
 
 
@@ -105,14 +111,14 @@ public  class MetadataResultSets
 
       @Override
       public ColumnDefinitions getColumnDefinitions() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        return columnDefinitions;
       }
 
       @Override
       public Row one() {
         if (curRowNum < cannedRows.length) {
           curRowNum++;
-          curCannedRow = cannedRows[curRowNum];
+          curCannedRow = cannedRows[curRowNum - 1];
           return curCannedRow;
         } else {
           // TODO - do we throw something here?
@@ -157,7 +163,7 @@ public  class MetadataResultSets
 
       @Override
       public boolean isExhausted() {
-        return curRowNum > cannedRows.length;
+        return curRowNum >= cannedRows.length;
       }
 
     }
@@ -177,7 +183,7 @@ public  class MetadataResultSets
 
         @Override
         public boolean isNull(int i) {
-          return false;  //To change body of implemented methods use File | Settings | File Templates.
+          return rowValues[i] == null;
         }
 
         @Override
@@ -267,7 +273,7 @@ public  class MetadataResultSets
 
         @Override
         public String getString(int i) {
-          return rowValues[i - 1].toString();
+          return rowValues[i].toString();
         }
 
         @Override
@@ -346,20 +352,6 @@ public  class MetadataResultSets
         }
      }
 
-     static class CannedColumnDefinitions implements java.lang.Iterable<com.datastax.driver.core.ColumnDefinitions.Definition> {
-       List<com.datastax.driver.core.ColumnDefinitions.Definition> definitionList;
-
-       CannedColumnDefinitions(com.datastax.driver.core.ColumnDefinitions.Definition[] defs) {
-          definitionList = Arrays.asList(defs);
-       }
-
-       @Override
-       public Iterator<ColumnDefinitions.Definition> iterator() {
-         return definitionList.iterator();
-       }
-     }
-
-
     // Convenience method for cleaner code.  Why don't they have macros in Java???
     private static CannedRow mkRow(Object... objects) {
       return new CannedRow(objects);
@@ -369,15 +361,18 @@ public  class MetadataResultSets
     public  CassandraResultSet makeTableTypes(CassandraStatement statement) throws SQLException
     {
         CannedResultSet cr = new CannedResultSet()
-                .withRows(mkRow(TABLE_CONSTANT))
-                .withColNames("TBL_SOMETHING");
+                .withColNames("TABLE_CAT")
+                .withRows(mkRow(TABLE_CONSTANT));
 
         return new CassandraResultSet(statement,cr);
     }
 
   public  CassandraResultSet makeCatalogs(CassandraStatement statement) throws SQLException
   {
-    CannedResultSet cr = new CannedResultSet(mkRow(statement.connection.getCatalog()));
+    CannedResultSet cr = new CannedResultSet()
+            .withColNames("TABLE_CATALOG")
+            .withRows(mkRow(statement.connection.getCatalog()));
+
     return new CassandraResultSet(statement,cr);
   }
 
@@ -406,9 +401,12 @@ public  class MetadataResultSets
         if (cannedRows.isEmpty())return result;
 
         // use schemas with the key in column number 2 (one based)
-        CannedResultSet cr = new CannedResultSet(cannedRows.toArray(new CannedRow[cannedRows.size()]));
+        CannedResultSet cr = new CannedResultSet()
+                .withColNames("TABLE_SCHEME","TABLE_CATALOG")
+                .withRows(cannedRows.toArray(new CannedRow[cannedRows.size()]));
 
-        result = new CassandraResultSet(statement,cr);
+
+      result = new CassandraResultSet(statement,cr);
         return result;
     }
     
