@@ -32,9 +32,7 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.*;
 
-import com.datastax.driver.core.ColumnDefinitions;
-import com.datastax.driver.core.ExecutionInfo;
-import com.datastax.driver.core.Row;
+import com.datastax.driver.core.*;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.cassandra.utils.ByteBufferUtil;
 
@@ -50,35 +48,59 @@ public  class MetadataResultSets
     // Private Constructor
     private MetadataResultSets() {}
 
-
     private static class CannedResultSet implements com.datastax.driver.core.ResultSet {
 
       private CannedRow[] cannedRows;
-      private List<String> ColNames;
+      private String[] colNames;
       private int curRowNum;
       private CannedRow curCannedRow;
       private AbstractJdbcType[] jdbcTypes;
+      private CannedColumnDefinitions schema;
 
-      private CannedResultSet(CannedRow...cannedRows) {
-        this.cannedRows = cannedRows;
+      private CannedResultSet() {
+        cannedRows = null;
         curRowNum = 0;
         curCannedRow = null;
+        schema = null;
         jdbcTypes = null;
+      }
+
+      private CannedResultSet withRows(CannedRow...cannedRows) {
+         this.cannedRows = cannedRows;
 
         // Populate JDBCTypes off the first row
         if (cannedRows.length > 0) {
 
            Object[] row1Values = cannedRows[0].rowValues;
+          com.datastax.driver.core.ColumnDefinitions.Definition[] defs
+                  = new com.datastax.driver.core.ColumnDefinitions.Definition[row1Values.length];
            jdbcTypes = new AbstractJdbcType[row1Values.length];
            for (int i = 0; i < row1Values.length; i++) {
              try {
+               DataType dataType;
+               if (row1Values[i].getClass() == String.class) {
+                 dataType = DataType.text();
+               } else if (row1Values[i].getClass() == boolean.class) {
+                  dataType = DataType.cboolean();
+               } else {
+                 // TODO Build this out
+                 dataType = DataType.cint();
+               }
+               defs[i] = new CannedDefinition("","","",dataType);
                jdbcTypes[i] = HandleObjects.getType(row1Values[i].getClass());
              } catch (SQLException e) {
                // TODO - do something better here
                e.printStackTrace();
              }
            }
+          schema = new CannedColumnDefinitions(defs);
         }
+      }
+
+
+      public CannedResultSet withColNames(String...colNames) {
+        this.colNames = colNames;
+        return this;
       }
 
       @Override
@@ -337,6 +359,7 @@ public  class MetadataResultSets
        }
      }
 
+
     // Convenience method for cleaner code.  Why don't they have macros in Java???
     private static CannedRow mkRow(Object... objects) {
       return new CannedRow(objects);
@@ -345,7 +368,10 @@ public  class MetadataResultSets
 
     public  CassandraResultSet makeTableTypes(CassandraStatement statement) throws SQLException
     {
-        CannedResultSet cr = new CannedResultSet(mkRow(TABLE_CONSTANT));
+        CannedResultSet cr = new CannedResultSet()
+                .withRows(mkRow(TABLE_CONSTANT))
+                .withColNames("TBL_SOMETHING");
+
         return new CassandraResultSet(statement,cr);
     }
 
