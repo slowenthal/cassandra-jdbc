@@ -49,20 +49,23 @@ public  class MetadataResultSets
 
     public  CassandraResultSet makeTableTypes(CassandraStatement statement) throws SQLException
     {
-        CannedResultSet cr = new CannedResultSet()
-                .withColNames("TABLE_TYPE")
-                .withRows(mkRow(TABLE_CONSTANT))
-                .withDataTypes(DataType.text());
+//        CannedResultSet cr = new CannedResultSet()
+//                .withColNames("TABLE_TYPE")
+//                .withRows(mkRow(TABLE_CONSTANT))
+//                .withDataTypes(DataType.text());
+
+      CannedResultSet cr = new CannedResultSet("TABLE_TYPE", DataType.text())
+              .addRow(TABLE_CONSTANT);
 
         return new CassandraResultSet(statement,cr);
     }
 
+
+
   public  CassandraResultSet makeCatalogs(CassandraStatement statement) throws SQLException
   {
-    CannedResultSet cr = new CannedResultSet()
-            .withColNames("TABLE_CAT")
-            .withRows(mkRow(statement.connection.getCatalog()))
-            .withDataTypes(DataType.text());
+    CannedResultSet cr = new CannedResultSet("TABLE_CAT", DataType.text())
+            .addRow(statement.connection.getCatalog());
 
     return new CassandraResultSet(statement,cr);
   }
@@ -79,24 +82,20 @@ public  class MetadataResultSets
 
         String catalog = statement.connection.getCatalog();
 
-         CassandraResultSet result = (CassandraResultSet)statement.executeQuery(query);
+        // use schemas with the key in column number 2 (one based)
+        CannedResultSet cr = new CannedResultSet(
+                                "TABLE_SCHEM", DataType.text(),
+                                "TABLE_CATALOG",DataType.text()) ;
 
-         ArrayList<CannedRow> cannedRows = new ArrayList<CannedRow>();
+      CassandraResultSet result = (CassandraResultSet)statement.executeQuery(query);
 
         while (result.next())
         {
-              cannedRows.add(mkRow(result.getString(1), catalog));
+              cr.addRow(result.getString(1), catalog);
         }
 
         // just return the empty result if there were no rows
-        if (cannedRows.isEmpty())return result;
-
-        // use schemas with the key in column number 2 (one based)
-        CannedResultSet cr = new CannedResultSet()
-                .withColNames("TABLE_SCHEM","TABLE_CATALOG")
-                .withRows(cannedRows.toArray(new CannedRow[cannedRows.size()]))
-                .withDataTypes(DataType.text(), DataType.text());
-
+    //    if (cr.isEmpty()) return result;
 
       result = new CassandraResultSet(statement,cr);
         return result;
@@ -145,15 +144,24 @@ public  class MetadataResultSets
 
         String catalog = statement.connection.getCatalog();
 
-        ArrayList<CannedRow> cannedRows = new ArrayList<CannedRow>();
-
-
       // determine the schemas
       CassandraResultSet result = (CassandraResultSet)statement.executeQuery(query.toString());
-                
+
+      CannedResultSet cr = new CannedResultSet(
+                      "TABLE_CAT",                 DataType.text(),
+                      "TABLE_SCHEM",               DataType.text(),
+                      "TABLE_NAME",                DataType.text(),
+                      "TABLE_TYPE",                DataType.text(),
+                      "REMARKS",                   DataType.text(),
+                      "TYPE_CAT",                  DataType.text(),
+                      "TYPE_SCHEM",                DataType.text(),
+                      "TYPE_NAME",                 DataType.text(),
+                      "SELF_REFERENCING_COL_NAME", DataType.text(),
+                      "REF_GENERATION",            DataType.text());
+
         while (result.next())
         {
-           cannedRows.add(mkRow(catalog,    // TABLE_CAT
+           cr.addRow(catalog,               // TABLE_CAT
                    result.getString(1),     // TABLE_SCHEM
                    result.getString(2),     // TABLE_NAME
                    TABLE_CONSTANT,          // TABLE_TYPE
@@ -163,13 +171,9 @@ public  class MetadataResultSets
                    null,                    // TYPE_NAME
                    null,                    // SELF_REFERENCING_COL_NAME
                    null                     // REF_GENERATION
-           ));
+           );
         }
 
-      CannedResultSet cr = new CannedResultSet()
-              .withColNames("TABLE_CAT","TABLE_SCHEM","TABLE_NAME","TABLE_TYPE","REMARKS","TYPE_CAT","TYPE_SCHEM","TYPE_NAME","SELF_REFERENCING_COL_NAME","REF_GENERATION")
-              .withRows(cannedRows.toArray(new CannedRow[cannedRows.size()]))
-              .withDataTypes(DataType.text(), DataType.text(), DataType.text(), DataType.text(), DataType.text(), DataType.text(), DataType.text(), DataType.text(), DataType.text(), DataType.text());
 
       return new CassandraResultSet(statement, cr);
     }
@@ -251,9 +255,35 @@ public  class MetadataResultSets
 
       // determine the schemas
       CassandraResultSet result = (CassandraResultSet)statement.executeQuery(query.toString());
-      ArrayList<CannedRow> cannedRows = new ArrayList<CannedRow>();
+
+      CannedResultSet cr = new CannedResultSet(
+                      "TABLE_CAT",            DataType.text(),
+                      "TABLE_SCHEM",          DataType.text(),
+                      "TABLE_NAME",           DataType.text(),
+                      "COLUMN_NAME",          DataType.text(),
+                      "DATA_TYPE",            DataType.cint(),
+                      "TYPE_NAME ",           DataType.text(),
+                      "COLUMN_SIZE",          DataType.cint(),
+                      "BUFFER_LENGTH",        DataType.cint(),
+                      "DECIMAL_DIGITS",       DataType.cint(),
+                      "NUM_PREC_RADIX",       DataType.cint(),
+                      "NULLABLE",             DataType.cint(),
+                      "REMARKS",              DataType.text(),
+                      "COLUMN_DEF",           DataType.text(),
+                      "SQL_DATA_TYPE",        DataType.cint(),
+                      "SQL_DATETIME_SUB",     DataType.cint(),
+                      "CHAR_OCTET_LENGTH",    DataType.cint(),
+                      "ORDINAL_POSITION",     DataType.cint(),
+                      "IS_NULLABLE",          DataType.text(),
+                      "SCOPE_CATLOG",         DataType.text(),
+                      "SCOPE_SCHEMA",         DataType.text(),
+                      "SCOPE_TABLE",          DataType.text(),
+                      "SOURCE_DATA_TYPE",     DataType.cint(),
+                      "IS_AUTOINCREMENT",     DataType.text(),
+                      "IS_GENERATEDCOLUMN",   DataType.text());
 
       int ordinalPosition = 0;
+
       while (result.next())
       {
         ordinalPosition ++;
@@ -264,7 +294,7 @@ public  class MetadataResultSets
         int npr =  (jtype != null && (jtype.getJdbcType() == Types.DECIMAL || jtype.getJdbcType() == Types.NUMERIC)) ? 10 : 2;
         Integer charOctetLength = (jtype instanceof JdbcAscii || jtype instanceof JdbcUTF8) ? Integer.MAX_VALUE : null;
 
-        cannedRows.add(mkRow(catalog,    //  1. TABLE_CAT
+        cr.addRow(catalog,               //  1. TABLE_CAT
                 result.getString(1),     //  2. TABLE_SCHEM
                 result.getString(2),     //  3. TABLE_NAME
                 result.getString(3),     //  4. COLUMN_NAME
@@ -288,21 +318,9 @@ public  class MetadataResultSets
                 null,                    // 22. SOURCE_DATA_TYPE short
                 "NO",                    // 23. IS_AUTOINCREMENT String
                 "NO"                     // 24. IS_GENERATEDCOLUMN String
-        ));
+        );
       }
 
-      CannedResultSet cr = new CannedResultSet()
-              .withColNames("TABLE_CAT","TABLE_SCHEM","TABLE_NAME","COLUMN_NAME","DATA_TYPE","TYPE_NAME ",
-                             "COLUMN_SIZE","BUFFER_LENGTH","DECIMAL_DIGITS","NUM_PREC_RADIX",
-                             "NULLABLE","REMARKS","COLUMN_DEF","SQL_DATA_TYPE","SQL_DATETIME_SUB",
-                             "CHAR_OCTET_LENGTH","ORDINAL_POSITION","IS_NULLABLE","SCOPE_CATLOG","SCOPE_SCHEMA",
-                             "SCOPE_TABLE","SOURCE_DATA_TYPE","IS_AUTOINCREMENT","IS_GENERATEDCOLUMN")
-              .withRows(cannedRows.toArray(new CannedRow[cannedRows.size()]))
-              .withDataTypes(DataType.text(),DataType.text(),DataType.text(),DataType.text(),DataType.cint(),DataType.text(),
-                      DataType.cint(),DataType.cint(),DataType.cint(),DataType.cint(),
-                      DataType.cint(),DataType.text(),DataType.text(),DataType.cint(),DataType.cint(),
-                      DataType.cint(),DataType.cint(),DataType.text(),DataType.text(),DataType.text(),
-                      DataType.text(),DataType.cint(),DataType.text(),DataType.text());
 
       return new CassandraResultSet(statement, cr);
     }
@@ -413,8 +431,8 @@ public  class MetadataResultSets
 //	    }
 //
 //	    result = new CassandraResultSet(statement, cqlresult);
-//	    return result;
-    return null;
+	    return result;
+
 	}
 
 	public List<PKInfo> getPrimaryKeys(CassandraStatement statement, String schema, String table) throws SQLException
@@ -529,8 +547,13 @@ public  class MetadataResultSets
 		
 	    String catalog = statement.connection.getCatalog();
 
-    ArrayList<CannedRow> cannedRows = new ArrayList<CannedRow>();
-
+    CannedResultSet cr = new CannedResultSet(
+                    "TABLE_CAT", DataType.text(),
+                    "TABLE_SCHEM",       DataType.text(),
+                    "TABLE_NAME",        DataType.text(),
+                    "COLUMN_NAME",       DataType.text(),
+                    "KEY_SEQ",           DataType.text(),
+                    "PK_NAME",           DataType.text());
 
     // determine the schemas
 
@@ -540,19 +563,15 @@ public  class MetadataResultSets
       PKInfo info = it.next();
       seq++;
 
-      cannedRows.add(mkRow(catalog,    // TABLE_CAT
+      cr.addRow(catalog,         // TABLE_CAT
               info.schema,             // TABLE_SCHEM
               info.table,              // TABLE_NAME
               info.name,               // COLUMN_NAME
               seq,                     // KEY_SEQ
               null                     // PK_NAME
-      ));
+      );
     }
 
-    CannedResultSet cr = new CannedResultSet()
-            .withColNames("TABLE_CAT","TABLE_SCHEM","TABLE_NAME","COLUMN_NAME","KEY_SEQ","PK_NAME")
-            .withRows(cannedRows.toArray(new CannedRow[cannedRows.size()]))
-            .withDataTypes(DataType.text(), DataType.text(), DataType.text(), DataType.text(), DataType.cint(), DataType.text());
 
     return new CassandraResultSet(statement, cr);
 }

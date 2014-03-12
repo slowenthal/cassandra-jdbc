@@ -174,6 +174,8 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         statement = null;
         meta = new CResultSetMetaData();
         jdbcTypes = null;
+        schema = null;
+        cResultSet = null;
     }
 
     /**

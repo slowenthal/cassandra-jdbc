@@ -18,48 +18,38 @@ import java.util.*;
  */
 public class CannedResultSet implements com.datastax.driver.core.ResultSet {
 
-  private CannedRow[] cannedRows;
-  private String[] colNames;
+  private List<Row> cannedRows;
   private int curRowNum;
   private CannedRow curCannedRow;
   private CannedColumnDefinitions columnDefinitions;
 
-  public CannedResultSet() {
+
+  public CannedResultSet(Object...objectPairs) {
+    // Format of the parameters is name, type, name, type, ...
+    // Breaks some rules, but so what?
+
     cannedRows = null;
     curRowNum = 0;
     curCannedRow = null;
     columnDefinitions = null;
-  }
-
-  public CannedResultSet withRows(CannedRow... cannedRows) {
-    this.cannedRows = cannedRows;
-
-    return this;
-  }
+    cannedRows = new ArrayList<Row>();
 
 
-  public CannedResultSet withColNames(String...colNames) {
-    this.colNames = colNames;
-    return this;
-  }
+    int numElements = objectPairs.length / 2;
+    com.datastax.driver.core.ColumnDefinitions.Definition[] defs
+            = new com.datastax.driver.core.ColumnDefinitions.Definition[numElements];
 
-  public CannedResultSet withDataTypes(DataType...dataTypes) {
-    if (colNames == null) {
-      // We need the column names first
-      // TODO - throw something
+    for (int i = 0; i < numElements; i++) {
+        defs[i] = new CannedDefinition("","",  (String)objectPairs[i * 2], (DataType) objectPairs[i * 2 + 1]);
     }
+    this.columnDefinitions = new CannedColumnDefinitions(defs);
+  }
 
-      com.datastax.driver.core.ColumnDefinitions.Definition[] defs
-              = new com.datastax.driver.core.ColumnDefinitions.Definition[dataTypes.length];
-    int i = 0;
-    for (DataType dt : dataTypes) {
-      defs[i] = new CannedDefinition("","",colNames[i], dt);
-      i++;
-    }
-
-    columnDefinitions = new CannedColumnDefinitions(defs);
+  public CannedResultSet addRow(Object... objects) {
+     this.cannedRows.add(new CannedRow(objects));
     return this;
   }
+
 
   @Override
   public ColumnDefinitions getColumnDefinitions() {
@@ -68,9 +58,9 @@ public class CannedResultSet implements com.datastax.driver.core.ResultSet {
 
   @Override
   public Row one() {
-    if (curRowNum < cannedRows.length) {
+    if (curRowNum < cannedRows.size()) {
       curRowNum++;
-      curCannedRow = cannedRows[curRowNum - 1];
+      curCannedRow = (CannedRow)cannedRows.get(curRowNum - 1);
       return curCannedRow;
     } else {
       // TODO - do we throw something here?
@@ -80,7 +70,7 @@ public class CannedResultSet implements com.datastax.driver.core.ResultSet {
 
   @Override
   public List<Row> all() {
-    return Arrays.asList((Row[]) cannedRows);
+    return cannedRows;
   }
 
   @Override
@@ -115,7 +105,7 @@ public class CannedResultSet implements com.datastax.driver.core.ResultSet {
 
   @Override
   public boolean isExhausted() {
-    return curRowNum >= cannedRows.length;
+    return curRowNum >= cannedRows.size();
   }
 
 }
