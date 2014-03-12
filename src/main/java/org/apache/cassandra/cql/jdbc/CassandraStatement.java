@@ -142,6 +142,7 @@ class CassandraStatement extends AbstractStatement implements CassandraStatement
 
     public void close() throws SQLException
     {
+        checkNotClosed();
         connection.removeStatement(this);
         connection = null;
         cql = null;

@@ -50,7 +50,7 @@ public  class MetadataResultSets
     public  CassandraResultSet makeTableTypes(CassandraStatement statement) throws SQLException
     {
         CannedResultSet cr = new CannedResultSet()
-                .withColNames("TABLE_CAT")
+                .withColNames("TABLE_TYPE")
                 .withRows(mkRow(TABLE_CONSTANT))
                 .withDataTypes(DataType.text());
 
@@ -60,7 +60,7 @@ public  class MetadataResultSets
   public  CassandraResultSet makeCatalogs(CassandraStatement statement) throws SQLException
   {
     CannedResultSet cr = new CannedResultSet()
-            .withColNames("TABLE_CATALOG")
+            .withColNames("TABLE_CAT")
             .withRows(mkRow(statement.connection.getCatalog()))
             .withDataTypes(DataType.text());
 
@@ -93,7 +93,7 @@ public  class MetadataResultSets
 
         // use schemas with the key in column number 2 (one based)
         CannedResultSet cr = new CannedResultSet()
-                .withColNames("TABLE_SCHEME","TABLE_CATALOG")
+                .withColNames("TABLE_SCHEM","TABLE_CATALOG")
                 .withRows(cannedRows.toArray(new CannedRow[cannedRows.size()]))
                 .withDataTypes(DataType.text(), DataType.text());
 

@@ -445,8 +445,7 @@ class CassandraDatabaseMetaData implements DatabaseMetaData
 
     public ResultSet getTableTypes() throws SQLException
     {
-        ResultSet result = MetadataResultSets.instance.makeTableTypes(statement);
-        return result;
+      return MetadataResultSets.instance.makeTableTypes(statement);
     }
 
     public ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types) throws SQLException
