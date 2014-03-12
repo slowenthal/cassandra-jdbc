@@ -235,7 +235,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         throw new SQLFeatureNotSupportedException(NOT_SUPPORTED);
     }
 
-    private void checkIndex(int column) throws SQLException
+    private void checkColumnNo(int column) throws SQLException
     {
         // 1 <= column <= size()
         if (column < 1 || column > schema.size()) throw new SQLSyntaxErrorException(String.format(MUST_BE_POSITIVE, String.valueOf(column)) + " " + schema.size());
@@ -277,7 +277,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
     /** @deprecated */
     public BigDecimal getBigDecimal(int column, int scale) throws SQLException
     {
-        checkIndex(column);
+        checkColumnNo(column);
         return getBigDecimal(column).setScale(scale);
     }
 
@@ -402,7 +402,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
     public final byte getByte(int column) throws SQLException
     {
-      checkIndex(column);
+      checkColumnNo(column);
       int index = column - 1;
       checkNotClosed();
       Class<?> type = schema.getType(index).asJavaClass();
@@ -446,7 +446,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 // TODO - probably remove this
 //    public TypedColumn getColumn(int index) throws SQLException
 //    {
-//        checkIndex(index);
+//        checkColumnNo(index);
 //        checkNotClosed();
 //        return values.get(index - 1);
 //    }
@@ -466,7 +466,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
     public Date getDate(int column, Calendar calendar) throws SQLException
     {
-        checkIndex(column);
+        checkColumnNo(column);
         return getDate(column);
     }
 
@@ -857,7 +857,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
     public Time getTime(int column, Calendar calendar) throws SQLException
     {
-        checkIndex(column);
+        checkColumnNo(column);
         // silently ignore the Calendar argument; its a hint we do not need
         return getTime(column);
     }
@@ -902,7 +902,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
     public Timestamp getTimestamp(int column, Calendar calendar) throws SQLException
     {
-        checkIndex(column);
+        checkColumnNo(column);
         // silently ignore the Calendar argument; its a hint we do not need
         return getTimestamp(column);
     }
@@ -1138,13 +1138,13 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
          */
         public String getCatalogName(int column) throws SQLException
         {
-            checkIndex(column);
+            checkColumnNo(column);
             return statement.connection.getCatalog();
         }
 
         public String getColumnClassName(int column) throws SQLException
         {
-            checkIndex(column);
+            checkColumnNo(column);
             return schema.getType(column - 1).asJavaClass().getName();
         }
 
@@ -1157,26 +1157,26 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
         public int getColumnDisplaySize(int column) throws SQLException
         {
-            checkIndex(column);
+            checkColumnNo(column);
             String stringValue = getString(column);
             return (stringValue == null ? -1 : stringValue.length());
         }
 
         public String getColumnLabel(int column) throws SQLException
         {
-            checkIndex(column);
+            checkColumnNo(column);
             return getColumnName(column);
         }
 
         public String getColumnName(int column) throws SQLException
         {
-            checkIndex(column);
+            checkColumnNo(column);
             return schema.getName(column - 1);
         }
 
         public int getColumnType(int column) throws SQLException
         {
-            checkIndex(column);
+            checkColumnNo(column);
             return jdbcTypes[column -1].getJdbcType();
         }
 
@@ -1185,14 +1185,14 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
          */
         public String getColumnTypeName(int column) throws SQLException
         {
-            checkIndex(column);
+            checkColumnNo(column);
             return schema.getType(column - 1).asJavaClass().getSimpleName();
         }
 
         public int getPrecision(int column) throws SQLException
         {
           // TODO - FIX THIS
-//            checkIndex(column);
+//            checkColumnNo(column);
 //            return col.getValueType().getPrecision(col.getValue());
             return 0;
         }
@@ -1200,7 +1200,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         public int getScale(int column) throws SQLException
         {
           // Todo - FIX THIS
-            checkIndex(column);
+            checkColumnNo(column);
            // return tc.getValueType().getScale(tc.getValue());
             return 0;
         }
@@ -1210,7 +1210,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
          */
         public String getSchemaName(int column) throws SQLException
         {
-            checkIndex(column);
+            checkColumnNo(column);
             return statement.connection.getSchema();
         }
 
@@ -1222,26 +1222,26 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         public boolean isAutoIncrement(int column) throws SQLException
         {
             // TODO - double check this
-            checkIndex(column);
+            checkColumnNo(column);
             return false; // todo: check Value is correct.
         }
 
         public boolean isCaseSensitive(int column) throws SQLException
         {
             // TODO Double check this
-            checkIndex(column);
+            checkColumnNo(column);
             return true;
         }
 
         public boolean isCurrency(int index) throws SQLException
         {
-            checkIndex(index);
+            checkColumnNo(index);
             return jdbcTypes[index - 1].isCurrency();
         }
 
         public boolean isDefinitelyWritable(int column) throws SQLException
         {
-            checkIndex(column);
+            checkColumnNo(column);
             return isWritable(column);
         }
 
@@ -1250,25 +1250,25 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
          */
         public int isNullable(int column) throws SQLException
         {
-            checkIndex(column);
+            checkColumnNo(column);
             return ResultSetMetaData.columnNullable;
         }
 
         public boolean isReadOnly(int column) throws SQLException
         {
-            checkIndex(column);
+            checkColumnNo(column);
             return column == 0;
         }
 
         public boolean isSearchable(int column) throws SQLException
         {
-            checkIndex(column);
+            checkColumnNo(column);
             return false;
         }
 
         public boolean isSigned(int column) throws SQLException
         {
-            checkIndex(column);
+            checkColumnNo(column);
             return jdbcTypes[column - 1].isSigned();
         }
 
@@ -1279,7 +1279,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
         public boolean isWritable(int column) throws SQLException
         {
-            checkIndex(column);
+            checkColumnNo(column);
             return column > 0;
         }
 
