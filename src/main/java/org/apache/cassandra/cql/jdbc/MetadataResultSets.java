@@ -528,50 +528,34 @@ public  class MetadataResultSets
 		Iterator<PKInfo> it = pks.iterator();
 		
 	    String catalog = statement.connection.getCatalog();
-	    Entry entryCatalog = new Entry("TABLE_CAT", bytes(catalog), Entry.ASCII_TYPE);
 
-	    List<Entry> col;
-	    List<List<Entry>> rows = new ArrayList<List<Entry>>();
-	
-        int seq = 0;
-	    // define the columns
-        while (it.hasNext()) 
-        {
-			PKInfo info = it.next();
-	        Entry entrySchema = new Entry("TABLE_SCHEM", bytes(info.schema), Entry.ASCII_TYPE);
-	        Entry entryTableName = new Entry("TABLE_NAME", bytes(info.table),Entry.ASCII_TYPE);
-	        Entry entryColumnName = new Entry("COLUMN_NAME", bytes(info.name), Entry.ASCII_TYPE);
-	        seq++;
-	        Entry entryKeySeq = new Entry("KEY_SEQ", bytes(seq), Entry.INT32_TYPE);
-	        Entry entryPKName = new Entry("PK_NAME", ByteBufferUtil.EMPTY_BYTE_BUFFER, Entry.ASCII_TYPE);
-	
-	        col = new ArrayList<Entry>();
-	        col.add(entryCatalog);
-	        col.add(entrySchema);
-	        col.add(entryTableName);
-	        col.add(entryColumnName);
-	        col.add(entryKeySeq);
-	        col.add(entryPKName);
-	        rows.add(col);
-	    }
-	
-	    // just return the empty result if there were no rows
-	    if (rows.isEmpty()) return new CassandraResultSet();
-	
-//	    // use schemas with the key in column number 2 (one based)
-//	    CqlResult cqlresult;
-//	    try
-//	    {
-//	        cqlresult = makeCqlResult(rows, 1);
-//	    }
-//	    catch (CharacterCodingException e)
-//	    {
-//	        throw new SQLTransientException(e);
-//	    }
-//
-//	    return new CassandraResultSet(statement, cqlresult);
-    return null;
-	}
+    ArrayList<CannedRow> cannedRows = new ArrayList<CannedRow>();
+
+
+    // determine the schemas
+
+    int seq = 0;
+    while (it.hasNext())
+    {
+      PKInfo info = it.next();
+      seq++;
+
+      cannedRows.add(mkRow(catalog,    // TABLE_CAT
+              info.schema,             // TABLE_SCHEM
+              info.table,              // TABLE_NAME
+              info.name,               // COLUMN_NAME
+              seq,                     // KEY_SEQ
+              null                     // PK_NAME
+      ));
+    }
+
+    CannedResultSet cr = new CannedResultSet()
+            .withColNames("TABLE_CAT","TABLE_SCHEM","TABLE_NAME","COLUMN_NAME","KEY_SEQ","PK_NAME")
+            .withRows(cannedRows.toArray(new CannedRow[cannedRows.size()]))
+            .withDataTypes(DataType.text(), DataType.text(), DataType.text(), DataType.text(), DataType.cint(), DataType.text());
+
+    return new CassandraResultSet(statement, cr);
+}
 
 	private class Entry
     {
