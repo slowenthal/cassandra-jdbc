@@ -85,7 +85,7 @@ public  class MetadataResultSets
 
         while (result.next())
         {
-              cannedRows.add(mkRow(catalog, result.getString(1)));
+              cannedRows.add(mkRow(result.getString(1), catalog));
         }
 
         // just return the empty result if there were no rows
@@ -120,6 +120,7 @@ public  class MetadataResultSets
         
         // example query to retrieve tables
         // SELECT keyspace_name,columnfamily_name,comment from schema_columnfamilies WHERE columnfamily_name = 'Test2';
+        // Note - the CQL3 will return the results in
         StringBuilder query = new StringBuilder("SELECT keyspace_name,columnfamily_name,comment FROM system.schema_columnfamilies");
 
         int filterCount = 0;
@@ -157,7 +158,7 @@ public  class MetadataResultSets
            cannedRows.add(mkRow(catalog,    // TABLE_CAT
                    result.getString(1),     // TABLE_SCHEM
                    result.getString(2),     // TABLE_NAME
-                   null,                    // TABLE_TYPE
+                   TABLE_CONSTANT,          // TABLE_TYPE
                    result.getString(3),     // REMARKS
                    null,                    // TYPE_CAT
                    null,                    // TYPE_SCHEM

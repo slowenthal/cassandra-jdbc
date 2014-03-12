@@ -213,7 +213,9 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
     private boolean hasMoreRows()
     {
+       if (cResultSet != null)
         return (!cResultSet.isExhausted());
+      else return false;
     }
 
     public boolean absolute(int arg0) throws SQLException
@@ -1146,7 +1148,9 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
         public int getColumnCount() throws SQLException
         {
-            return schema.size();
+            if (schema != null)
+              return schema.size();
+            else return 0;
         }
 
         public int getColumnDisplaySize(int column) throws SQLException

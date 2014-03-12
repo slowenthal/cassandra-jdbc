@@ -318,6 +318,8 @@ class CassandraConnection extends AbstractConnection implements Connection
 
     public boolean isValid(int timeout) throws SQLTimeoutException
     {
+      // TODO - Vigure this out - this had some kind of timeout checking
+      // It looks like it runs some little query too.
         if (timeout < 0) throw new SQLTimeoutException();
         return true ;
     }
