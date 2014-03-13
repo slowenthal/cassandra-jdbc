@@ -19,7 +19,6 @@ public class CannedRow implements Row {
     rowValues = objects;
   }
 
-
   @Override
   public ColumnDefinitions getColumnDefinitions() {
     return null;  //To change body of implemented methods use File | Settings | File Templates.

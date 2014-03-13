@@ -115,8 +115,8 @@ class CassandraConnection extends AbstractConnection implements Connection
                     .addContactPoints(host)
                     .build();
 
-
-            catalog = cluster.getClusterName();
+           // catalog = cluster.getClusterName();
+          catalog = cluster.getMetadata().getClusterName() ;
 
     // TODO - Add authentication
 

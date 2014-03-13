@@ -49,10 +49,6 @@ public  class MetadataResultSets
 
     public  CassandraResultSet makeTableTypes(CassandraStatement statement) throws SQLException
     {
-//        CannedResultSet cr = new CannedResultSet()
-//                .withColNames("TABLE_TYPE")
-//                .withRows(mkRow(TABLE_CONSTANT))
-//                .withDataTypes(DataType.text());
 
       CannedResultSet cr = new CannedResultSet("TABLE_TYPE", DataType.text())
               .addRow(TABLE_CONSTANT);
@@ -60,7 +56,103 @@ public  class MetadataResultSets
         return new CassandraResultSet(statement,cr);
     }
 
+  public CassandraResultSet makeImportedKeys(CassandraStatement statement) throws SQLException {
 
+//  PKTABLE_CAT String => primary key table catalog being imported (may be null)
+//  PKTABLE_SCHEM String => primary key table schema being imported (may be null)
+//  PKTABLE_NAME String => primary key table name being imported
+//  PKCOLUMN_NAME String => primary key column name being imported
+//  FKTABLE_CAT String => foreign key table catalog (may be null)
+//  FKTABLE_SCHEM String => foreign key table schema (may be null)
+//  FKTABLE_NAME String => foreign key table name
+//  FKCOLUMN_NAME String => foreign key column name
+//  KEY_SEQ short => sequence number within a foreign key( a value of 1 represents the first column of the foreign key, a value of 2 would represent the second column within the foreign key).
+//  UPDATE_RULE short => What happens to a foreign key when the primary key is updated:
+//  importedNoAction - do not allow update of primary key if it has been imported
+//  importedKeyCascade - change imported key to agree with primary key update
+//  importedKeySetNull - change imported key to NULL if its primary key has been updated
+//  importedKeySetDefault - change imported key to default values if its primary key has been updated
+//  importedKeyRestrict - same as importedKeyNoAction (for ODBC 2.x compatibility)
+//  DELETE_RULE short => What happens to the foreign key when primary is deleted.
+//  importedKeyNoAction - do not allow delete of primary key if it has been imported
+//  importedKeyCascade - delete rows that import a deleted key
+//  importedKeySetNull - change imported key to NULL if its primary key has been deleted
+//  importedKeyRestrict - same as importedKeyNoAction (for ODBC 2.x compatibility)
+//  importedKeySetDefault - change imported key to default if its primary key has been deleted
+//  FK_NAME String => foreign key name (may be null)
+//  PK_NAME String => primary key name (may be null)
+//  DEFERRABILITY short => can the evaluation of foreign key constraints be deferred until commit
+
+    CannedResultSet cr = new CannedResultSet(
+            "PKTABLE_CAT", DataType.text(),
+            "PKTABLE_SCHEM", DataType.text(),
+            "PKTABLE_NAME", DataType.text(),
+            "PKCOLUMN_NAME", DataType.text(),
+            "FKTABLE_CAT", DataType.text(),
+            "FKTABLE_SCHEM", DataType.text(),
+            "FKTABLE_NAME", DataType.text(),
+            "FKCOLUMN_NAME", DataType.text(),
+            "KEY_SEQ", DataType.cint(),
+            "UPDATE_RULE", DataType.cint(),
+            "DELETE_RULE", DataType.cint(),
+            "FK_NAME", DataType.text(),
+            "PK_NAME", DataType.text(),
+            "DEFERRABILITY", DataType.cint());
+
+    return new CassandraResultSet(statement, cr);
+  }
+
+  public CassandraResultSet makeTypeInfo(CassandraStatement statement) throws SQLException {
+    // This will be empty
+//
+//    TYPE_NAME String => Type name
+//    DATA_TYPE int => SQL data type from java.sql.Types
+//    PRECISION int => maximum precision
+//    LITERAL_PREFIX String => prefix used to quote a literal (may be null)
+//    LITERAL_SUFFIX String => suffix used to quote a literal (may be null)
+//    CREATE_PARAMS String => parameters used in creating the type (may be null)
+//    NULLABLE short => can you use NULL for this type.
+//            typeNoNulls - does not allow NULL values
+//    typeNullable - allows NULL values
+//    typeNullableUnknown - nullability unknown
+//    CASE_SENSITIVE boolean=> is it case sensitive.
+//            SEARCHABLE short => can you use "WHERE" based on this type:
+//    typePredNone - No support
+//    typePredChar - Only supported with WHERE .. LIKE
+//    typePredBasic - Supported except for WHERE .. LIKE
+//    typeSearchable - Supported for all WHERE ..
+//    UNSIGNED_ATTRIBUTE boolean => is it unsigned.
+//            FIXED_PREC_SCALE boolean => can it be a money value.
+//    AUTO_INCREMENT boolean => can it be used for an auto-increment value.
+//            LOCAL_TYPE_NAME String => localized version of type name (may be null)
+//    MINIMUM_SCALE short => minimum scale supported
+//    MAXIMUM_SCALE short => maximum scale supported
+//    SQL_DATA_TYPE int => unused
+//    SQL_DATETIME_SUB int => unused
+//    NUM_PREC_RADIX int => usually 2 or 10
+
+    CannedResultSet cr = new CannedResultSet(
+    "TYPE_NAME", DataType.text(),
+    "DATA_TYPE", DataType.cint(),
+    "PRECISION", DataType.cint(),
+    "LITERAL_PREFIX", DataType.text(),
+    "LITERAL_SUFFIX", DataType.text(),
+    "CREATE_PARAMS", DataType.text(),
+    "NULLABLE", DataType.cint(),
+    "CASE_SENSITIVE", DataType.cboolean(),
+    "UNSIGNED_ATTRIBUTE", DataType.cboolean(),
+    "FIXED_PREC_SCALE", DataType.cboolean(),
+    "AUTO_INCREMENT", DataType.cboolean(),
+    "LOCAL_TYPE_NAME", DataType.text(),
+    "MINIMUM_SCALE", DataType.cint(),
+    "MAXIMUM_SCALE", DataType.cint(),
+    "SQL_DATA_TYPE", DataType.cint(),
+    "SQL_DATETIME_SUB", DataType.cint(),
+    "NUM_PREC_RADIX", DataType.cint()
+    );
+
+    return new CassandraResultSet(statement, cr);
+  }
 
   public  CassandraResultSet makeCatalogs(CassandraStatement statement) throws SQLException
   {
@@ -96,6 +188,8 @@ public  class MetadataResultSets
 
         // just return the empty result if there were no rows
     //    if (cr.isEmpty()) return result;
+
+      cr.sortAlpha(0);
 
       result = new CassandraResultSet(statement,cr);
         return result;
@@ -174,7 +268,7 @@ public  class MetadataResultSets
            );
         }
 
-
+      cr.sortAlpha(1,2);
       return new CassandraResultSet(statement, cr);
     }
         

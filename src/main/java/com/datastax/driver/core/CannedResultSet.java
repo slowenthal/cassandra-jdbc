@@ -50,6 +50,22 @@ public class CannedResultSet implements com.datastax.driver.core.ResultSet {
     return this;
   }
 
+  public CannedResultSet sortAlpha(final int...keys) {
+
+    Collections.sort(this.cannedRows,new Comparator<Row>() {
+      @Override
+      public int compare(Row row, Row row2) {
+        int result = 0;
+        for(int k = 0; k < keys.length && result == 0; k++) {
+           result = row.getString(keys[k]).compareTo(row2.getString(keys[k]));
+        }
+        return result;
+      }
+    } );
+
+    return this;
+  }
+
 
   @Override
   public ColumnDefinitions getColumnDefinitions() {
