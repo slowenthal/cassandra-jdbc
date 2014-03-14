@@ -39,7 +39,7 @@ class CassandraDatabaseMetaData implements DatabaseMetaData
     {
         this.connection = connection;
     }
-    
+
     public boolean isWrapperFor(Class<?> iface) throws SQLException
     {
         return iface.isAssignableFrom(getClass());

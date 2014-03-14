@@ -34,6 +34,8 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.exceptions.UnavailableException;
+import com.datastax.driver.core.policies.ConstantReconnectionPolicy;
+import com.datastax.driver.core.policies.RoundRobinPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,10 +52,11 @@ class CassandraConnection extends AbstractConnection implements Connection
 
     private static final Logger logger = LoggerFactory.getLogger(CassandraConnection.class);
 
+    static final String IS_VALID_CQLQUERY_3_0_0 = "SELECT COUNT(*) FROM system.local";
+
     public static final int DB_MAJOR_VERSION = 1;
     public static final int DB_MINOR_VERSION = 2;
     public static final String DB_PRODUCT_NAME = "Cassandra";
-    public static final String DEFAULT_CQL_VERSION = "3.0.0";
     private final boolean autoCommit = true;
 
     private final int transactionIsolation = Connection.TRANSACTION_NONE;
@@ -113,6 +116,9 @@ class CassandraConnection extends AbstractConnection implements Connection
 
             cluster = Cluster.builder()
                     .addContactPoints(host)
+                    //.withLoadBalancingPolicy(new RoundRobinPolicy())
+                    //.withPoolingOptions(new PoolingOptions().setMaxConnectionsPerHost(HostDistance.LOCAL,1000))
+                    .withReconnectionPolicy(new ConstantReconnectionPolicy(10000))
                     .build();
 
            // catalog = cluster.getClusterName();
@@ -318,9 +324,33 @@ class CassandraConnection extends AbstractConnection implements Connection
 
     public boolean isValid(int timeout) throws SQLTimeoutException
     {
-      // TODO - Vigure this out - this had some kind of timeout checking
-      // It looks like it runs some little query too.
-        if (timeout < 0) throw new SQLTimeoutException();
+        if (timeout < 0) throw new SQLTimeoutException(BAD_TIMEOUT);
+
+        // set timeout
+        //socket.setTimeout(timeout * 1000);
+
+        try
+        {
+        	if (isClosed()) {
+        		return false;
+        	}
+
+            if (isAlive == null)
+            {
+                isAlive = prepareStatement(IS_VALID_CQLQUERY_3_0_0);
+            }
+            // the result is not important
+            isAlive.executeQuery().close();
+        }
+        catch (SQLException e)
+        {
+        	return false;
+        }
+        finally {
+            // reset timeout
+            //socket.setTimeout(0);
+        }
+
         return true ;
     }
 

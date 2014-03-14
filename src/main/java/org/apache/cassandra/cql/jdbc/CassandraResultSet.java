@@ -122,6 +122,11 @@ import org.slf4j.LoggerFactory;
  * </table>
  * 
  */
+
+// TODO - THE NPE catch blocks were put in because it seems as though we can fall through the null test,
+// TODO and values still come back as null.  Double check this stuff.  Some of the null values are returned
+// TODO as 0.  This came directly out of the original driver.
+
 class CassandraResultSet extends AbstractResultSet implements CassandraResultSetExtras
 {
     private static final Logger logger = LoggerFactory.getLogger(CassandraResultSet.class);
@@ -307,19 +312,22 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
         // TODO Fix this if (value instanceof BigDecimal) return (BigDecimal) value;
 
+        try
+        {
+
         if (type == Long.class) return BigDecimal.valueOf(curRow.getLong(index));
 
         if (type == Double.class) return BigDecimal.valueOf(curRow.getDouble(index));
 
         // TODO - fix this if (value instanceof BigInteger) return new BigDecimal((BigInteger) value);
-
-        try
-        {
             if (type == String.class) return (new BigDecimal(curRow.getString(index)));
         }
         catch (NumberFormatException e)
         {
             throw new SQLSyntaxErrorException(e);
+        }
+        catch (NullPointerException e) {
+          return BigDecimal.ZERO;
         }
 
         throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, type.getSimpleName(), "BigDecimal"));
@@ -343,17 +351,19 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
         // TODO - fix this if (value instanceof BigInteger) return curRow.getB;
 
-        if (type == Integer.class) return BigInteger.valueOf(curRow.getInt(index));
-
-        if (type == Long.class) return BigInteger.valueOf(curRow.getLong(index));
-
         try
         {
+            if (type == Integer.class) return BigInteger.valueOf(curRow.getInt(index));
+            if (type == Long.class) return BigInteger.valueOf(curRow.getLong(index));
+
             if (type == String.class) return (new BigInteger(curRow.getString(index)));
         }
         catch (NumberFormatException e)
         {
             throw new SQLSyntaxErrorException(e);
+        }
+        catch (NullPointerException e) {
+          return BigInteger.ZERO;
         }
 
         throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, type.getSimpleName(), "BigInteger"));
@@ -386,6 +396,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         if (type == String.class)
         {
             String str = getString(column);   // note - we use "column here" as we call a public get
+            if (str == null) return false;
             if (str.equalsIgnoreCase("true")) return true;
             if (str.equalsIgnoreCase("false")) return false;
 
@@ -413,19 +424,22 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
         if (wasNull) return 0;
 
+        try
+        {
         if (type == Integer.class) return (new Integer(curRow.getInt(index))).byteValue();
 
         if (type == Long.class) return (new Long(curRow.getInt(index))).byteValue();
 
        // TODO - fix this if (value instanceof BigInteger) return ((BigInteger) value).byteValue();
 
-        try
-        {
             if (type == String.class) return (new Byte(curRow.getString(index)));
         }
         catch (NumberFormatException e)
         {
             throw new SQLSyntaxErrorException(e);
+        }
+        catch (NullPointerException e) {   // protect type conversion
+          return 0;
         }
 
         throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, type.getSimpleName(), "Byte"));
@@ -442,7 +456,11 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         checkNotClosed();
         wasNull = curRow.isNull(index);
         if (wasNull) return null;
+      try {
         return curRow.getBytes(index).array();
+      } catch (NullPointerException e) {
+        return null;
+      }
     }
 
 // TODO - probably remove this
@@ -495,18 +513,20 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
         Class<?> type = schema.getType(index).asJavaClass();
 
-        if (type == Long.class) return new Date(curRow.getLong(index));
-
-        if (type == java.util.Date.class) return new Date(curRow.getDate(index).getTime());
-
         try
         {
+        if (type == Long.class) return new Date(curRow.getLong(index));
+        if (type == java.util.Date.class) return new Date(curRow.getDate(index).getTime());
+
             if (type == String.class) return Date.valueOf(curRow.getString(index));
         }
         catch (IllegalArgumentException e)
         {
             throw new SQLSyntaxErrorException(e);
         }
+      catch (NullPointerException e) {
+        return null;
+      }
 
         throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, type.getSimpleName(), "SQL Date"));
     }
@@ -543,6 +563,9 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         catch (NumberFormatException e)
         {
             throw new SQLSyntaxErrorException(e);
+        }
+        catch (NullPointerException e) {
+          return 0.0;
         }
 
         throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, type.getSimpleName(), "Double"));
@@ -592,6 +615,8 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         catch (NumberFormatException e)
         {
             throw new SQLException(e);
+        } catch (NullPointerException e) {
+          return (float) 0.0;
         }
 
         throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, type.getSimpleName(), "Float"));
@@ -631,6 +656,9 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         catch (NumberFormatException e)
         {
             throw new SQLSyntaxErrorException(e);
+        }
+        catch (NullPointerException e) {
+          return 0;
         }
 
         throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, type.getSimpleName(), "int"));
@@ -744,13 +772,17 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
       if (type == Boolean.class) return curRow.getBool(index);
       if (type == Float.class) return curRow.getFloat(index);
       if (type == Double.class) return curRow.getDouble(index);
-      if (type == ByteBuffer.class) return curRow.getBytes(index).array();
+      try {
+        if (type == ByteBuffer.class) return curRow.getBytes(index).array();
 
       // TODO - there are more types
 
       if (type == java.util.Date.class) {
           return new Timestamp(curRow.getDate(index).getTime());
         }
+      } catch (NullPointerException e) {
+        return null;
+      }
 
       // TODO - Throw something
       return null;
@@ -815,21 +847,22 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         if (wasNull) return 0;
         Class<?> type = schema.getType(index).asJavaClass();
 
+      try {
         if (type == Integer.class) return ((Integer) curRow.getInt(index)).shortValue();
-
         if (type == Long.class) return ((Long) curRow.getLong(index)).shortValue();
 
 
-        // TODO - FIX THIS if (value instanceof BigInteger) return ((BigInteger) value).shortValue();
+      // TODO - FIX THIS if (value instanceof BigInteger) return ((BigInteger) value).shortValue();
 
-        try
-        {
             if (type ==  String.class) return (new Short(curRow.getString(index)));
         }
         catch (NumberFormatException e)
         {
             throw new SQLSyntaxErrorException(e);
         }
+       catch (NullPointerException e) {
+        return 0;
+      }
 
         throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, type.getSimpleName(), "Short"));
     }
@@ -854,6 +887,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         if (wasNull) return null;
 
         Object value = getObject(column);  // we're using a public function - so use column here
+        if (value == null) return null;
         return value.toString();
     }
 
@@ -886,18 +920,19 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         if (wasNull) return null;
         Class<?> type = schema.getType(index).asJavaClass();
 
+      try {
         if (type == Long.class) return new Time(curRow.getLong(index));
-
         if (type == java.util.Date.class) return new Time(curRow.getDate(index).getTime());
 
-        try
-        {
             if (type == String.class) return Time.valueOf(curRow.getString(index));
         }
         catch (IllegalArgumentException e)
         {
             throw new SQLSyntaxErrorException(e);
         }
+       catch (NullPointerException e) {
+        return null;
+      }
 
         throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, type.getSimpleName(), "SQL Time"));
     }
@@ -931,18 +966,19 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
         if (wasNull) return null;
         Class<?> type = schema.getType(index).asJavaClass();
 
+      try {
         if (type == Long.class) return new Timestamp(curRow.getLong(index));
-
         if (type == java.util.Date.class) return new Timestamp(curRow.getDate(index).getTime());
 
-        try
-        {
             if (type == String.class) return Timestamp.valueOf(curRow.getString(index));
         }
         catch (IllegalArgumentException e)
         {
             throw new SQLSyntaxErrorException(e);
         }
+       catch (NullPointerException e) {
+        return null;
+      }
 
         throw new SQLSyntaxErrorException(String.format(NOT_TRANSLATABLE, type.getSimpleName(), "SQL Timestamp"));
     }
