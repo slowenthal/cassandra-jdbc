@@ -216,7 +216,8 @@ class CassandraConnection extends AbstractConnection implements Connection
     public void commit() throws SQLException
     {
         checkNotClosed();
-        throw new SQLFeatureNotSupportedException(ALWAYS_AUTOCOMMIT);
+        // TODO - Add a property to allow commit calls
+        //throw new SQLFeatureNotSupportedException(ALWAYS_AUTOCOMMIT);
     }
 
     public Statement createStatement() throws SQLException
@@ -399,7 +400,8 @@ class CassandraConnection extends AbstractConnection implements Connection
     public void setAutoCommit(boolean autoCommit) throws SQLException
     {
         checkNotClosed();
-        if (!autoCommit) throw new SQLFeatureNotSupportedException(ALWAYS_AUTOCOMMIT);
+        // TODO - Let's support applications that call this, or make throwing the exception a property
+        // if (!autoCommit) throw new SQLFeatureNotSupportedException(ALWAYS_AUTOCOMMIT);
     }
 
     public void setCatalog(String arg0) throws SQLException

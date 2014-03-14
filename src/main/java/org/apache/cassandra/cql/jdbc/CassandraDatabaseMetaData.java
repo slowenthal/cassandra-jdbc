@@ -878,7 +878,7 @@ public class CassandraDatabaseMetaData implements DatabaseMetaData
 
     public boolean supportsSchemasInTableDefinitions() throws SQLException
     {
-        return false;
+        return true;
     }
 
     public boolean supportsSelectForUpdate() throws SQLException
