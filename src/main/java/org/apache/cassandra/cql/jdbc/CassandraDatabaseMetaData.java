@@ -31,7 +31,7 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLSyntaxErrorException;
 
-class CassandraDatabaseMetaData implements DatabaseMetaData
+public class CassandraDatabaseMetaData implements DatabaseMetaData
 {
     private CassandraConnection connection;
 
@@ -964,7 +964,7 @@ class CassandraDatabaseMetaData implements DatabaseMetaData
     
     public boolean generatedKeyAlwaysReturned() throws SQLException
     {
-    	throw new SQLFeatureNotSupportedException(String.format(NOT_SUPPORTED));
+    	return false; //throw new SQLFeatureNotSupportedException(String.format(NOT_SUPPORTED));
     }
     
     public ResultSet getPseudoColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern) throws SQLException
