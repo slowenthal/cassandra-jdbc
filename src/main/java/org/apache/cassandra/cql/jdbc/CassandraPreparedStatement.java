@@ -45,6 +45,7 @@ import java.sql.SQLTransientConnectionException;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.text.ParseException;
 import java.util.Calendar;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -84,12 +85,14 @@ class CassandraPreparedStatement extends CassandraStatement implements PreparedS
         ) throws SQLException
     {
        super(con,cql,rsType,rsConcurrency,rsHoldability);
-       if (LOG.isTraceEnabled()) LOG.trace("CQL: " + this.cql);
+       if (LOG.isTraceEnabled()) LOG.trace("Preparing CQL: " + this.cql);
        try
        {
            com.datastax.driver.core.PreparedStatement result = con.prepare(cql, consistencyLevel);
 
-           preparedStatement = result;   // TODO What's this
+           if (LOG.isTraceEnabled()) LOG.trace("Prepared ID: " + result + "CQL: " + this.cql);
+
+           preparedStatement = result;   // Set it here, in case we throw
            count = result.getVariables().size();
            isDML = Utils.isDML(cql);
        }
@@ -124,16 +127,18 @@ class CassandraPreparedStatement extends CassandraStatement implements PreparedS
 
     public void close()
     {
+      // TODO - added the check to avoid NPE, but why is this null?
+      if (connection != null) {
         connection.removeStatement(this);
-
         connection = null;
+      }
     }
 
     private void doExecute() throws SQLException
     {
-        if (LOG.isTraceEnabled()) LOG.trace("CQL: " + cql);
         try
         {
+            if (LOG.isTraceEnabled()) LOG.trace("Executing: " + preparedStatement);
             resetResults();
             com.datastax.driver.core.ResultSet result = connection.execute(preparedStatement, bindValues, consistencyLevel);
 
@@ -343,6 +348,28 @@ class CassandraPreparedStatement extends CassandraStatement implements PreparedS
         checkNotClosed();
         checkIndex(parameterIndex);
 
+        if (targetSqlType == Types.FLOAT) {
+          if (object.getClass() == String.class) {
+            object = Float.parseFloat((String) object);
+          }
+        }
+        if (targetSqlType == Types.INTEGER) {
+          if (object.getClass() == String.class) {
+            object = Integer.parseInt((String) object);
+          }
+        }
+
+        if (targetSqlType == Types.TIMESTAMP) {
+          if (object.getClass() == String.class) {
+           // TODO - we need fancier date parsing - handle more than just C* format
+            try {
+              object = Utils.CassandraDateFormat.parse((String)object) ;
+            } catch (ParseException e) {
+              throw new SQLSyntaxErrorException("Date Format '" + object + "' Invalid");
+            }
+          }
+        }
+        // TODO - convert the types here
         bindValues.put(parameterIndex, object);
     }
 

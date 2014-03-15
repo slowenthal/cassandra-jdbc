@@ -117,7 +117,7 @@ class CassandraConnection extends AbstractConnection implements Connection
             cluster = Cluster.builder()
                     .addContactPoints(host)
                     //.withLoadBalancingPolicy(new RoundRobinPolicy())
-                    //.withPoolingOptions(new PoolingOptions().setMaxConnectionsPerHost(HostDistance.LOCAL,1000))
+                    .withPoolingOptions(new PoolingOptions().setMaxConnectionsPerHost(HostDistance.LOCAL,1000))
                     .withReconnectionPolicy(new ConstantReconnectionPolicy(10000))
                     .build();
 
@@ -347,10 +347,10 @@ class CassandraConnection extends AbstractConnection implements Connection
         {
         	return false;
         }
-        finally {
+//        finally {
             // reset timeout
             //socket.setTimeout(0);
-        }
+//        }
 
         return true ;
     }

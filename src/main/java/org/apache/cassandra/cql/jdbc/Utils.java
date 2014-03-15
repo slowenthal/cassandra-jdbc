@@ -30,6 +30,7 @@ import java.nio.ByteBuffer;
 import java.sql.SQLException;
 import java.sql.SQLNonTransientConnectionException;
 import java.sql.SQLSyntaxErrorException;
+import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +59,8 @@ class Utils
     public static final String DEFAULT_HOST = "localhost";
     public static final int DEFAULT_PORT = 9160;
     public static final ConsistencyLevel DEFAULT_CONSISTENCY = ConsistencyLevel.ONE;
+
+    public static final SimpleDateFormat CassandraDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
     
 
     public static final String KEY_VERSION = "version";
