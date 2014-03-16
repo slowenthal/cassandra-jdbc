@@ -35,6 +35,7 @@ import com.datastax.driver.core.*;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.exceptions.UnavailableException;
 import com.datastax.driver.core.policies.ConstantReconnectionPolicy;
+import com.datastax.driver.core.policies.LatencyAwarePolicy;
 import com.datastax.driver.core.policies.RoundRobinPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -117,7 +118,8 @@ class CassandraConnection extends AbstractConnection implements Connection
             cluster = Cluster.builder()
                     .addContactPoints(host)
                     //.withLoadBalancingPolicy(new RoundRobinPolicy())
-                    .withPoolingOptions(new PoolingOptions().setMaxConnectionsPerHost(HostDistance.LOCAL,1000))
+                    .withLoadBalancingPolicy(new LatencyAwarePolicy.Builder(new RoundRobinPolicy()).build())
+                    //.withPoolingOptions(new PoolingOptions().setMaxConnectionsPerHost(HostDistance.LOCAL,1000))
                     .withReconnectionPolicy(new ConstantReconnectionPolicy(10000))
                     .build();
 
