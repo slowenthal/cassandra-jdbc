@@ -773,6 +773,11 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
       if (type == Float.class) return curRow.getFloat(index);
       if (type == Double.class) return curRow.getDouble(index);
       try {
+
+        // If a UUID is treated as an object send back a string.  Most apps don't know of UUIDs
+        // If they want back a UUID, they can call get bytes.
+
+        if (type == UUID.class) return curRow.getUUID(index).toString();
         if (type == ByteBuffer.class) return curRow.getBytes(index).array();
 
       // TODO - there are more types
