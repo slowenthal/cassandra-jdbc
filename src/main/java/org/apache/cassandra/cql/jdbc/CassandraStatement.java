@@ -36,6 +36,9 @@ import java.sql.SQLWarning;
 import java.sql.Statement;
 import com.datastax.driver.core.ConsistencyLevel;
 
+import com.datastax.driver.core.exceptions.NoHostAvailableException;
+import com.datastax.driver.core.exceptions.QueryExecutionException;
+import com.datastax.driver.core.exceptions.QueryValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -165,27 +168,18 @@ class CassandraStatement extends AbstractStatement implements CassandraStatement
                currentResultSet = new CassandraResultSet(this, rSet);
              }
         }
-        // TODO - Fix exceptions
-        catch (Exception e)
+        catch (NoHostAvailableException e)
         {
-            throw new SQLSyntaxErrorException(e.getMessage()+"\n'"+cql+"'",e);
+          throw new SQLNonTransientConnectionException(NO_SERVER, e);
         }
-//        catch (UnavailableException e)
-//        {
-//            throw new SQLNonTransientConnectionException(NO_SERVER, e);
-//        }
-//        catch (TimedOutException e)
-//        {
-//            throw new SQLTransientConnectionException(e);
-//        }
-//        catch (SchemaDisagreementException e)
-//        {
-//            throw new SQLRecoverableException(SCHEMA_MISMATCH);
-//        }
-//        catch (TException e)
-//        {
-//            throw new SQLNonTransientConnectionException(e);
-//        }
+        catch (QueryValidationException e)
+        {
+          throw new SQLSyntaxErrorException(e.getMessage() + "\n'" + cql + "'", e);
+        }
+        catch (QueryExecutionException e)
+        {
+          throw new SQLTransientConnectionException(e);
+        }
 
     }
 

@@ -50,6 +50,10 @@ import java.util.Calendar;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import com.datastax.driver.core.exceptions.NoHostAvailableException;
+import com.datastax.driver.core.exceptions.QueryExecutionException;
+import com.datastax.driver.core.exceptions.QueryValidationException;
+import com.datastax.driver.core.exceptions.UnavailableException;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -151,30 +155,17 @@ class CassandraPreparedStatement extends CassandraStatement implements PreparedS
             }
 
         }
-        // TODO - fix exceptions
-//        catch (InvalidRequestException e)
-//        {
-//            throw new SQLSyntaxErrorException(e.getWhy() + "\n'" + cql + "'", e);
-//        }
-//        catch (UnavailableException e)
-//        {
-//            throw new SQLNonTransientConnectionException(NO_SERVER, e);
-//        }
-//        catch (TimedOutException e)
-//        {
-//            throw new SQLTransientConnectionException(e);
-//        }
-//        catch (SchemaDisagreementException e)
-//        {
-//            throw new SQLRecoverableException(SCHEMA_MISMATCH);
-//        }
-//        catch (TException e)
-//        {
-//            throw new SQLNonTransientConnectionException(e);
-//        }
-        // todo remove this
-        catch (Exception e) {
-          e.printStackTrace();
+        catch (NoHostAvailableException e)
+        {
+            throw new SQLNonTransientConnectionException(NO_SERVER, e);
+        }
+        catch (QueryValidationException e)
+        {
+            throw new SQLSyntaxErrorException(e.getMessage() + "\n'" + cql + "'", e);
+        }
+        catch (QueryExecutionException e)
+        {
+            throw new SQLTransientConnectionException(e);
         }
     }
 
@@ -365,7 +356,7 @@ class CassandraPreparedStatement extends CassandraStatement implements PreparedS
             try {
               object = Utils.CassandraDateFormat.parse((String)object) ;
             } catch (ParseException e) {
-              throw new SQLSyntaxErrorException("Date Format '" + object + "' Invalid");
+              throw new SQLSyntaxErrorException("Date Format '" + object + "' Invalid. Requires \"" + Utils.CASSANDRA_DATE_FORMAT_STRING + "\".");
             }
           }
         }

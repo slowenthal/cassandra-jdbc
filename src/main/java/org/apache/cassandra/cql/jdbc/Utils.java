@@ -21,7 +21,6 @@
 
 package org.apache.cassandra.cql.jdbc;
 
-import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -37,13 +36,10 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.Deflater;
 
 import com.datastax.driver.core.ConsistencyLevel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Charsets;
 
 /**
  * A set of static utility methods used by the JDBC Suite, and various default values and error message strings
@@ -60,7 +56,8 @@ class Utils
     public static final int DEFAULT_PORT = 9160;
     public static final ConsistencyLevel DEFAULT_CONSISTENCY = ConsistencyLevel.ONE;
 
-    public static final SimpleDateFormat CassandraDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
+    public static final String CASSANDRA_DATE_FORMAT_STRING = "yyyy-MM-dd HH:mm:ssZ";
+    public static final SimpleDateFormat CassandraDateFormat = new SimpleDateFormat(CASSANDRA_DATE_FORMAT_STRING);
     
 
     public static final String KEY_VERSION = "version";
