@@ -171,6 +171,8 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
     private final AbstractJdbcType[] jdbcTypes;
 
+    boolean isClosed = false;
+
     /**
      * no argument constructor.
      */
@@ -267,6 +269,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
     public void close() throws SQLException
     {
+       isClosed = true;
     }
 
     public int findColumn(String name) throws SQLException
@@ -1031,8 +1034,7 @@ class CassandraResultSet extends AbstractResultSet implements CassandraResultSet
 
     public boolean isClosed() throws SQLException
     {
-      // TODO - FIX THIS - not sure when to consider it closed.
-        return false;
+        return isClosed;
     }
 
     public boolean isFirst() throws SQLException

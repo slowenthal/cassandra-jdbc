@@ -81,23 +81,23 @@ class CassandraStatement extends AbstractStatement implements CassandraStatement
     
     protected ConsistencyLevel consistencyLevel;
 
-    CassandraStatement(CassandraConnection con) throws SQLException
+    CassandraStatement(CassandraConnection con) throws SQLNonTransientException
     {
         this(con, null, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, ResultSet.HOLD_CURSORS_OVER_COMMIT);
     }
 
-    CassandraStatement(CassandraConnection con, String cql) throws SQLException
+    CassandraStatement(CassandraConnection con, String cql) throws SQLNonTransientException
     {
         this(con, cql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, ResultSet.HOLD_CURSORS_OVER_COMMIT);
     }
 
-    CassandraStatement(CassandraConnection con, String cql, int resultSetType, int resultSetConcurrency) throws SQLException
+    CassandraStatement(CassandraConnection con, String cql, int resultSetType, int resultSetConcurrency) throws SQLNonTransientException
     {
         this(con, cql, resultSetType, resultSetConcurrency, ResultSet.HOLD_CURSORS_OVER_COMMIT);
     }
 
     CassandraStatement(CassandraConnection con, String cql, int resultSetType, int resultSetConcurrency,
-                       int resultSetHoldability) throws SQLException
+                       int resultSetHoldability) throws SQLNonTransientException
     {
         this.connection = con;
         this.cql = cql;

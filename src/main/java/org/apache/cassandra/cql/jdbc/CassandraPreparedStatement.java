@@ -74,7 +74,7 @@ class CassandraPreparedStatement extends CassandraStatement implements PreparedS
     private boolean isDML;
 
 
-    CassandraPreparedStatement(CassandraConnection con, String cql) throws SQLException
+    CassandraPreparedStatement(CassandraConnection con, String cql) throws SQLNonTransientException
     {
         this(con, cql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, ResultSet.HOLD_CURSORS_OVER_COMMIT);
     }
@@ -86,34 +86,18 @@ class CassandraPreparedStatement extends CassandraStatement implements PreparedS
         int rsType,
         int rsConcurrency,
         int rsHoldability
-        ) throws SQLException
+        ) throws SQLNonTransientException
     {
        super(con,cql,rsType,rsConcurrency,rsHoldability);
-       if (LOG.isTraceEnabled()) LOG.trace("Preparing CQL: " + this.cql);
-       try
-       {
-           com.datastax.driver.core.PreparedStatement result = con.prepare(cql, consistencyLevel);
+      if (LOG.isTraceEnabled()) LOG.trace("Preparing CQL: " + this.cql);
+      com.datastax.driver.core.PreparedStatement result = con.prepare(cql, consistencyLevel);
 
-           if (LOG.isTraceEnabled()) LOG.trace("Prepared ID: " + result + "CQL: " + this.cql);
+      if (LOG.isTraceEnabled()) LOG.trace("Prepared ID: " + result + "CQL: " + this.cql);
 
-           preparedStatement = result;   // Set it here, in case we throw
-           count = result.getVariables().size();
-           isDML = Utils.isDML(cql);
-       }
+      preparedStatement = result;   // Set it here, in case we throw
+      count = result.getVariables().size();
+      isDML = Utils.isDML(cql);
 
-       // TODO - Fix this
-//       catch (InvalidRequestException e)
-//       {
-//           throw new SQLSyntaxErrorException(e);
-//       }
-//       catch (TException e)
-//       {
-//           throw new SQLNonTransientConnectionException(e);
-//       }   //TODO - remove this
-       catch (Exception e)
-       {
-         e.printStackTrace();
-       }
     }
     
     String getCql()
@@ -325,7 +309,7 @@ class CassandraPreparedStatement extends CassandraStatement implements PreparedS
 
     public void setObject(int parameterIndex, Object object) throws SQLException
     {
-        // For now all objects are forced to String type
+        // For now all objects are forced to String type TODO - fix this
         setObject(parameterIndex, object, Types.VARCHAR, 0);
     }
 

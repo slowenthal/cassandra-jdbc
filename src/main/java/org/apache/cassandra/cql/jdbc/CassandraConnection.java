@@ -33,6 +33,9 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.exceptions.NoHostAvailableException;
+import com.datastax.driver.core.exceptions.QueryExecutionException;
+import com.datastax.driver.core.exceptions.QueryValidationException;
 import com.datastax.driver.core.exceptions.UnavailableException;
 import com.datastax.driver.core.policies.ConstantReconnectionPolicy;
 import com.datastax.driver.core.policies.LatencyAwarePolicy;
@@ -85,8 +88,8 @@ class CassandraConnection extends AbstractConnection implements Connection
     protected String currentKeyspace;//current schema
     int majorCqlVersion;
 
-    protected Cluster cluster;
-    protected Session session;
+ //   protected Cluster cluster = null;
+    protected Session session = null;
 
 
     PreparedStatement isAlive = null;
@@ -115,55 +118,22 @@ class CassandraConnection extends AbstractConnection implements Connection
     // TODO - Add properties for load balancing, retry, etc.
     // TODO - do something with the port
 
-            cluster = Cluster.builder()
-                    .addContactPoints(host)
-                    //.withLoadBalancingPolicy(new RoundRobinPolicy())
-                    .withLoadBalancingPolicy(new LatencyAwarePolicy.Builder(new RoundRobinPolicy()).build())
-                    //.withPoolingOptions(new PoolingOptions().setMaxConnectionsPerHost(HostDistance.LOCAL,1000))
-                    .withReconnectionPolicy(new ConstantReconnectionPolicy(10000))
-                    .build();
-
-           // catalog = cluster.getClusterName();
-          catalog = cluster.getMetadata().getClusterName() ;
-
     // TODO - Add authentication
 
-//            if (username != null)
-//            {
-//                Map<String, String> credentials = new HashMap<String, String>();
-//                credentials.put("username", username);
-//                if (password != null) credentials.put("password", password);
-//                AuthenticationRequest areq = new AuthenticationRequest(credentials);
-//                client.login(areq);
-//            }
+          // TODO - this class needs to handle more than one keyspace;
+          session = CassandraSessionFactory.getSession(host,currentKeyspace);
+          catalog = session.getCluster().getMetadata().getClusterName();
 
-          //   decoder = new ColumnDecoder(client.describe_keyspaces());
 
-          if (currentKeyspace != null)
-            session = cluster.connect(currentKeyspace);
-          else
-            session = cluster.connect();
 
           Object[] args = {host, port, currentKeyspace, catalog, defaultConsistencyLevel.name()};
           logger.debug("Connected to {}:{} in Cluster '{}' using Keyspace '{}' and Consistency level {}",args);
+          logger.debug("Cluster: {}  Session: {}",session.getCluster(), session);
         }
-        // TODO - fix the exceptions
-        catch (Exception e)
+        catch (NoHostAvailableException e)
         {
-            throw new SQLSyntaxErrorException(e);
+          throw new SQLNonTransientConnectionException(NO_SERVER, e);
         }
-//        catch (TException e)
-//        {
-//            throw new SQLNonTransientConnectionException(e);
-//        }
-//        catch (AuthenticationException e)
-//        {
-//            throw new SQLInvalidAuthorizationSpecException(e);
-//        }
-//        catch (AuthorizationException e)
-//        {
-//            throw new SQLInvalidAuthorizationSpecException(e);
-//        }
     }
     
     // get the Major portion of a string like : Major.minor.patch where 2 is the default
@@ -466,7 +436,6 @@ class CassandraConnection extends AbstractConnection implements Connection
       return session.execute(simpleStatement);
     }
 
-    // TODO - implement this
     protected ResultSet execute(com.datastax.driver.core.PreparedStatement ps, Map<Integer, Object> values, ConsistencyLevel consistencyLevel)
     {
       Object[] valarray = new Object[values.size()];
@@ -478,19 +447,18 @@ class CassandraConnection extends AbstractConnection implements Connection
       return session.execute(bs);
     }
     
-    protected com.datastax.driver.core.PreparedStatement prepare(String queryStr, ConsistencyLevel consistencyLevel) throws Exception
-    {
+    protected com.datastax.driver.core.PreparedStatement prepare(String queryStr, ConsistencyLevel consistencyLevel) throws SQLNonTransientException {
         try
         {
              com.datastax.driver.core.PreparedStatement ps = session.prepare(queryStr);
              ps.setConsistencyLevel(consistencyLevel);
              return ps;
         }
-        catch (Exception error)    // TODO - catch correct exceptions
+        catch (NoHostAvailableException error)
         {
             numFailures++;
             timeOfLastFailure = System.currentTimeMillis();
-            throw error;
+            throw new SQLNonTransientException(error);
         }
 
     }
@@ -508,8 +476,9 @@ class CassandraConnection extends AbstractConnection implements Connection
      */
     protected void disconnect()
     {
-       session.close();
-       cluster.close();
+      // TODO - Implement this
+//       session.close();
+//       cluster.close();
     }
 
     /**
